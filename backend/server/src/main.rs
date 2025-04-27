@@ -109,8 +109,8 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn health_check() -> Json<()> {
-    Json(())
+async fn health_check() -> Json<serde_json::Value> {
+    Json(serde_json::json!({"message": "pong"}))
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
