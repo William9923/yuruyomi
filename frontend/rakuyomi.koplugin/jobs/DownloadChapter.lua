@@ -57,4 +57,9 @@ function DownloadChapter:runUntilCompletion()
   return Job.runUntilCompletion(self)
 end
 
+--- @return SuccessfulResponse<nil>|PendingResponse<PendingState>|ErrorResponse
+function DownloadChapter:poll()
+  return Job.poll(self)
+end
+
 return DownloadChapter

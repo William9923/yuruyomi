@@ -11,6 +11,7 @@ local util = require("util")
 
 local Backend = require("Backend")
 local DownloadChapter = require("jobs/DownloadChapter")
+local DownloadChapterJobDialog = require("DownloadChapterJobDialog")
 local DownloadUnreadChapters = require("jobs/DownloadUnreadChapters")
 local DownloadUnreadChaptersJobDialog = require("DownloadUnreadChaptersJobDialog")
 local Icons = require("Icons")
@@ -294,66 +295,71 @@ function ChapterListing:openChapterOnReader(chapter, download_job)
 
     local time = require("ui/time")
     local start_time = time.now()
-    local response = LoadingDialog:showAndRun(
-      "Downloading chapter...",
-      function()
-        return download_job:runUntilCompletion()
-      end
-    )
 
-    if response.type == 'ERROR' then
-      ErrorDialog:show(response.message)
+    local dialog = DownloadChapterJobDialog:new({
+      show_parent = self,
+      job = download_job,
+      dismiss_callback = function()
+        self:updateChapterList()
+      end,
+      onSuccess = function(response)
+        -- FIXME Mutating here _still_ sucks, we gotta think of a better way.
+        chapter.downloaded = true
 
-      return
-    end
+        local manga_path = response.body
 
-    -- FIXME Mutating here _still_ sucks, we gotta think of a better way.
-    chapter.downloaded = true
+        logger.info("Waited ", time.to_ms(time.since(start_time)), "ms for download job to finish.")
 
-    local manga_path = response.body
 
-    logger.info("Waited ", time.to_ms(time.since(start_time)), "ms for download job to finish.")
+        local nextChapter = findNextChapter(self.chapters, chapter)
+        local nextChapterDownloadJob = nil
 
-    local nextChapter = findNextChapter(self.chapters, chapter)
-    local nextChapterDownloadJob = nil
+        if nextChapter ~= nil then
+          nextChapterDownloadJob = DownloadChapter:new(
+            nextChapter.source_id,
+            nextChapter.manga_id,
+            nextChapter.id,
+            nextChapter.chapter_num
+          )
+        end
 
-    if nextChapter ~= nil then
-      nextChapterDownloadJob = DownloadChapter:new(
-        nextChapter.source_id,
-        nextChapter.manga_id,
-        nextChapter.id,
-        nextChapter.chapter_num
-      )
-    end
+        local onReturnCallback = function()
+          self:updateItems()
 
-    local onReturnCallback = function()
-      self:updateItems()
-
-      UIManager:show(self)
-    end
-
-    local onEndOfBookCallback = function()
-      Backend.markChapterAsRead(chapter.source_id, chapter.manga_id, chapter.id)
-
-      self:updateChapterList()
-
-      if nextChapter ~= nil then
-        logger.info("opening next chapter", nextChapter)
-        self:openChapterOnReader(nextChapter, nextChapterDownloadJob)
-      else
-        MangaReader:closeReaderUi(function()
           UIManager:show(self)
-        end)
-      end
-    end
+        end
 
-    MangaReader:show({
-      path = manga_path,
-      on_end_of_book_callback = onEndOfBookCallback,
-      on_return_callback = onReturnCallback,
+        local onEndOfBookCallback = function()
+          Backend.markChapterAsRead(chapter.source_id, chapter.manga_id, chapter.id)
+
+          self:updateChapterList()
+
+          if nextChapter ~= nil then
+            logger.info("opening next chapter", nextChapter)
+            self:openChapterOnReader(nextChapter, nextChapterDownloadJob)
+          else
+            MangaReader:closeReaderUi(function()
+              UIManager:show(self)
+            end)
+          end
+        end
+
+        MangaReader:show({
+          path = manga_path,
+          on_end_of_book_callback = onEndOfBookCallback,
+          on_return_callback = onReturnCallback,
+        })
+
+        self:onClose()
+      end,
+      onError = function(response)
+          ErrorDialog:show(response.message)
+          return
+      end
     })
 
-    self:onClose()
+    dialog:show()
+
   end)
 end
 
@@ -363,6 +369,7 @@ function ChapterListing:openMenu()
 
   local buttons = {
     {
+      -- TODO: we could add chapters here...
       {
         text = Icons.FA_DOWNLOAD .. " Download unread chapters…",
         callback = function()

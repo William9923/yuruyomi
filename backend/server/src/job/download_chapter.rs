@@ -59,6 +59,7 @@ impl Job for DownloadChapterJob {
         todo!()
     }
 
+    // TODO: if we want to start applying chapter page progress, we can apply it here
     async fn poll(&self) -> JobState<Self::Progress, Self::Output, Self::Error> {
         match &*self.0.lock().await {
             None => JobState::InProgress(()),
