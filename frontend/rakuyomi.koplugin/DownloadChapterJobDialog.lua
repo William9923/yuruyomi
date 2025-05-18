@@ -53,7 +53,9 @@ function DownloadChapterJobDialog:pollAndCreateTextWidget()
 
   if state.type == 'SUCCESS' then
     message = self.cancellation_requested and 'Download cancelled!' or 'Download complete!'
-    self.onSuccess(state)
+    if not self.cancellation_requested then
+      self.onSuccess(state)
+    end
   elseif state.type == 'PENDING' then
     if self.cancellation_requested then
       message = 'Waiting until download are cancelled…'
@@ -61,12 +63,11 @@ function DownloadChapterJobDialog:pollAndCreateTextWidget()
       message = 'Downloading chapter, Please wait…'
     end
   elseif state.type == 'ERROR' then
-    -- message = 'An error occurred while downloading chapters: ' .. state.message
     self.onError(state)
   end
 
-  local is_cancellable = state.type == 'PENDING' and not self.cancellation_requested
-  local is_finished = state.type ~= 'PENDING'
+  local is_cancellable = not self.cancellation_requested
+  local is_finished = state.type ~= 'PENDING' or self.cancellation_requested
 
   local widget = InfoMessage:new {
     modal = false,
@@ -118,8 +119,7 @@ end
 
 --- @private
 function DownloadChapterJobDialog:onCancellationRequested()
-  print("cancel called ?")
-  self.job:requestCancellation()
+  --  self.job:requestCancellation()
   self.cancellation_requested = true
 
   UIManager:nextTick(self.updateProgress, self)
