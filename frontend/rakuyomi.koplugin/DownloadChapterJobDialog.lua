@@ -118,6 +118,7 @@ end
 
 --- @private
 function DownloadChapterJobDialog:onCancellationRequested()
+  print("cancel called ?")
   self.job:requestCancellation()
   self.cancellation_requested = true
 
