@@ -299,9 +299,6 @@ function ChapterListing:openChapterOnReader(chapter, download_job)
     local dialog = DownloadChapterJobDialog:new({
       show_parent = self,
       job = download_job,
-      dismiss_callback = function()
-        self:updateChapterList()
-      end,
       onSuccess = function(response)
         -- FIXME Mutating here _still_ sucks, we gotta think of a better way.
         chapter.downloaded = true
