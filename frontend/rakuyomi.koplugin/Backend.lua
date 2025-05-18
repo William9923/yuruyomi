@@ -3,10 +3,15 @@ local ffiutil = require("ffi/util")
 local rapidjson = require("rapidjson")
 local util = require("util")
 
-local Paths = require("Paths")
 local Platform = require("Platform")
 
 local SERVER_STARTUP_TIMEOUT_SECONDS = tonumber(os.getenv('RAKUYOMI_SERVER_STARTUP_TIMEOUT') or 5)
+
+local INTERNAL_CALL_TIMEOUT_SECONDS = 5
+local EXTERNAL_CALL_TIMEOUT_SECONDS = 15
+local DOWNLOAD_CALL_TIMEOUT_SECONDS = 120
+
+
 
 --- @class Backend
 --- @field private server Server
@@ -81,6 +86,7 @@ function Backend.requestJson(request)
       method = request.method or "GET",
       headers = headers,
       body = serialized_body,
+      timeout_seconds = request.timeout,
     }
   )
 
@@ -175,6 +181,7 @@ end
 function Backend.getMangasInLibrary()
   return Backend.requestJson({
     path = "/library",
+    timeout = INTERNAL_CALL_TIMEOUT_SECONDS,
   })
 end
 
@@ -183,7 +190,8 @@ end
 function Backend.addMangaToLibrary(source_id, manga_id)
   return Backend.requestJson({
     path = "/mangas/" .. source_id .. "/" .. util.urlEncode(manga_id) .. "/add-to-library",
-    method = "POST"
+    method = "POST",
+    timeout = INTERNAL_CALL_TIMEOUT_SECONDS,
   })
 end
 
@@ -192,7 +200,8 @@ end
 function Backend.removeMangaFromLibrary(source_id, manga_id)
   return Backend.requestJson({
     path = "/mangas/" .. source_id .. "/" .. util.urlEncode(manga_id) .. "/remove-from-library",
-    method = "POST"
+    method = "POST",
+    timeout = INTERNAL_CALL_TIMEOUT_SECONDS,
   })
 end
 
@@ -203,7 +212,8 @@ function Backend.searchMangas(search_text)
     path = "/mangas",
     query_params = {
       q = search_text
-    }
+    },
+    timeout = EXTERNAL_CALL_TIMEOUT_SECONDS,
   })
 end
 
@@ -212,6 +222,7 @@ end
 function Backend.listCachedChapters(source_id, manga_id)
   return Backend.requestJson({
     path = "/mangas/" .. source_id .. "/" .. util.urlEncode(manga_id) .. "/chapters",
+    timeout = INTERNAL_CALL_TIMEOUT_SECONDS,
   })
 end
 
@@ -221,6 +232,7 @@ function Backend.refreshChapters(source_id, manga_id)
   return Backend.requestJson({
     path = "/mangas/" .. source_id .. "/" .. util.urlEncode(manga_id) .. "/refresh-chapters",
     method = "POST",
+    timeout = EXTERNAL_CALL_TIMEOUT_SECONDS,
   })
 end
 
@@ -230,6 +242,7 @@ function Backend.downloadAllChapters(source_id, manga_id)
   return Backend.requestJson({
     path = "/mangas/" .. source_id .. "/" .. util.urlEncode(manga_id) .. "/chapters/download-all",
     method = "POST",
+    timeout = INTERNAL_CALL_TIMEOUT_SECONDS,
   })
 end
 
@@ -241,6 +254,7 @@ function Backend.getDownloadAllChaptersProgress(source_id, manga_id)
   return Backend.requestJson({
     path = "/mangas/" ..
         source_id .. "/" .. util.urlEncode(manga_id) .. "/chapters/download-all-progress",
+    timeout = INTERNAL_CALL_TIMEOUT_SECONDS,
   })
 end
 
@@ -252,6 +266,7 @@ function Backend.cancelDownloadAllChapters(source_id, manga_id)
     path = "/mangas/" ..
         source_id .. "/" .. util.urlEncode(manga_id) .. "/chapters/cancel-download-all",
     method = "POST",
+    timeout = INTERNAL_CALL_TIMEOUT_SECONDS,
   })
 end
 
@@ -269,8 +284,11 @@ function Backend.downloadChapter(source_id, manga_id, chapter_id, chapter_num)
         source_id .. "/" .. util.urlEncode(manga_id) .. "/chapters/" .. util.urlEncode(chapter_id) .. "/download",
     query_params = query_params,
     method = "POST",
+    timeout = DOWNLOAD_CALL_TIMEOUT_SECONDS,
   })
 end
+
+-- TODO: Add cancel download
 
 --- Marks the chapter as read.
 --- @return SuccessfulResponse<nil>|ErrorResponse
@@ -279,6 +297,7 @@ function Backend.markChapterAsRead(source_id, manga_id, chapter_id)
     path = "/mangas/" ..
         source_id .. "/" .. util.urlEncode(manga_id) .. "/chapters/" .. util.urlEncode(chapter_id) .. "/mark-as-read",
     method = "POST",
+    timeout = INTERNAL_CALL_TIMEOUT_SECONDS,
   })
 end
 
@@ -287,6 +306,7 @@ end
 function Backend.listInstalledSources()
   return Backend.requestJson({
     path = "/installed-sources",
+    timeout = INTERNAL_CALL_TIMEOUT_SECONDS,
   })
 end
 
@@ -295,6 +315,7 @@ end
 function Backend.listAvailableSources()
   return Backend.requestJson({
     path = "/available-sources",
+    timeout = EXTERNAL_CALL_TIMEOUT_SECONDS,
   })
 end
 
@@ -304,6 +325,7 @@ function Backend.installSource(source_id)
   return Backend.requestJson({
     path = "/available-sources/" .. source_id .. "/install",
     method = "POST",
+    timeout = DOWNLOAD_CALL_TIMEOUT_SECONDS,
   })
 end
 
@@ -313,6 +335,7 @@ function Backend.uninstallSource(source_id)
   return Backend.requestJson({
     path = "/installed-sources/" .. source_id,
     method = "DELETE",
+    timeout = EXTERNAL_CALL_TIMEOUT_SECONDS,
   })
 end
 
@@ -329,6 +352,7 @@ end
 function Backend.getSourceSettingDefinitions(source_id)
   return Backend.requestJson({
     path = "/installed-sources/" .. source_id .. "/setting-definitions",
+    timeout = INTERNAL_CALL_TIMEOUT_SECONDS,
   })
 end
 
@@ -337,6 +361,7 @@ end
 function Backend.getSourceStoredSettings(source_id)
   return Backend.requestJson({
     path = "/installed-sources/" .. source_id .. "/stored-settings",
+    timeout = INTERNAL_CALL_TIMEOUT_SECONDS,
   })
 end
 
@@ -345,6 +370,7 @@ function Backend.setSourceStoredSettings(source_id, stored_settings)
     path = "/installed-sources/" .. source_id .. "/stored-settings",
     method = 'POST',
     body = stored_settings,
+    timeout = INTERNAL_CALL_TIMEOUT_SECONDS,
   })
 end
 
@@ -355,7 +381,8 @@ end
 --- @return SuccessfulResponse<Settings>|ErrorResponse
 function Backend.getSettings()
   return Backend.requestJson({
-    path = "/settings"
+    path = "/settings",
+    timeout = INTERNAL_CALL_TIMEOUT_SECONDS,
   })
 end
 
@@ -365,7 +392,8 @@ function Backend.setSettings(settings)
   return Backend.requestJson({
     path = "/settings",
     method = 'PUT',
-    body = settings
+    body = settings,
+    timeout = INTERNAL_CALL_TIMEOUT_SECONDS,
   })
 end
 
@@ -380,7 +408,8 @@ function Backend.createDownloadChapterJob(source_id, manga_id, chapter_id, chapt
       manga_id = manga_id,
       chapter_id = chapter_id,
       chapter_num = chapter_num,
-    }
+    },
+    timeout = EXTERNAL_CALL_TIMEOUT_SECONDS,
   })
 end
 
@@ -394,7 +423,8 @@ function Backend.createDownloadUnreadChaptersJob(source_id, manga_id, amount)
       source_id = source_id,
       manga_id = manga_id,
       amount = amount
-    }
+    },
+    timeout = EXTERNAL_CALL_TIMEOUT_SECONDS,
   })
 end
 
@@ -409,7 +439,8 @@ end
 function Backend.getJobDetails(id)
   return Backend.requestJson({
     path = "/jobs/" .. id,
-    method = 'GET'
+    method = 'GET',
+    timeout = INTERNAL_CALL_TIMEOUT_SECONDS
   })
 end
 
@@ -418,7 +449,8 @@ end
 function Backend.requestJobCancellation(id)
   return Backend.requestJson({
     path = "/jobs/" .. id,
-    method = 'DELETE'
+    method = 'DELETE',
+    timeout = EXTERNAL_CALL_TIMEOUT_SECONDS
   })
 end
 
@@ -434,7 +466,8 @@ end
 function Backend.checkForUpdates()
   return Backend.requestJson({
     path = "/update/check",
-    method = "GET"
+    method = "GET",
+    timeout = EXTERNAL_CALL_TIMEOUT_SECONDS
   })
 end
 
@@ -447,7 +480,7 @@ function Backend.installUpdate(version)
     body = {
       version = version,
     },
-    timeout = 120,
+    timeout = DOWNLOAD_CALL_TIMEOUT_SECONDS,
   })
 end
 
