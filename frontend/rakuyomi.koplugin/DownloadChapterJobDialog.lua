@@ -57,11 +57,8 @@ function DownloadChapterJobDialog:pollAndCreateTextWidget()
   elseif state.type == 'PENDING' then
     if self.cancellation_requested then
       message = 'Waiting until download are cancelled…'
-    elseif state.body.type == 'INITIALIZING' then
-      message = 'Downloading chapter, Please wait…'
     else
-      message = 'Downloading chapter, this will take a while… (' ..
-          state.body.downloaded .. '/' .. state.body.total .. ')'
+      message = 'Downloading chapter, Please wait…'
     end
   elseif state.type == 'ERROR' then
     -- message = 'An error occurred while downloading chapters: ' .. state.message
