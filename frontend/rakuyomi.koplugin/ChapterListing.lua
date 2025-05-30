@@ -1,5 +1,6 @@
 local BD = require("ui/bidi")
 local ButtonDialog = require("ui/widget/buttondialog")
+
 local InfoMessage = require("ui/widget/infomessage")
 local InputDialog = require("ui/widget/inputdialog")
 local UIManager = require("ui/uimanager")
@@ -21,12 +22,20 @@ local MangaReader = require("MangaReader")
 local Testing = require("testing")
 
 local findNextChapter = require("chapters/findNextChapter")
+local function findOne(collection, predicate)
+  for _, elem in ipairs(collection) do
+    if predicate(elem) then
+      return elem
+    end
+  end
+  return nil
+end
 
 --- @class ChapterListing : { [any]: any }
 --- @field manga Manga
 --- @field chapters Chapter[]
 --- @field chapter_sorting_mode ChapterSortingMode
-local ChapterListing = Menu:extend {
+local ChapterListing = Menu:extend({
   name = "chapter_listing",
   is_enable_shortcut = false,
   is_popout = false,
@@ -40,7 +49,7 @@ local ChapterListing = Menu:extend {
   chapter_sorting_mode = nil,
   -- callback to be called when pressing the back button
   on_return_callback = nil,
-}
+})
 
 function ChapterListing:init()
   self.title_bar_left_icon = "appbar.menu"
@@ -73,7 +82,7 @@ end
 function ChapterListing:updateChapterList()
   local response = Backend.listCachedChapters(self.manga.source.id, self.manga.id)
 
-  if response.type == 'ERROR' then
+  if response.type == "ERROR" then
     ErrorDialog:show(response.message)
 
     return
@@ -83,6 +92,8 @@ function ChapterListing:updateChapterList()
   self.chapters = chapter_results
 
   self:updateItems()
+
+  return self.chapters
 end
 
 --- Updates the menu item contents with the chapter information
@@ -108,7 +119,7 @@ function ChapterListing:generateEmptyViewItemTable()
       text = "No chapters found. Try swiping down to refresh the chapter list.",
       dim = true,
       select_enabled = false,
-    }
+    },
   }
 end
 
@@ -141,10 +152,12 @@ function ChapterListing:generateItemTableFromChapters(chapters)
     chapter.index = index
   end
 
-  if self.chapter_sorting_mode == 'chapter_ascending' then
+  if self.chapter_sorting_mode == "chapter_ascending" then
     table.sort(sorted_chapters_with_index, isBeforeChapter)
   else
-    table.sort(sorted_chapters_with_index, function(a, b) return not isBeforeChapter(a, b) end)
+    table.sort(sorted_chapters_with_index, function(a, b)
+      return not isBeforeChapter(a, b)
+    end)
   end
 
   local item_table = {}
@@ -204,14 +217,11 @@ end
 function ChapterListing:fetchAndShow(manga, onReturnCallback, accept_cached_results)
   accept_cached_results = accept_cached_results or false
 
-  local refresh_chapters_response = LoadingDialog:showAndRun(
-    "Refreshing chapters...",
-    function()
-      return Backend.refreshChapters(manga.source.id, manga.id)
-    end
-  )
+  local refresh_chapters_response = LoadingDialog:showAndRun("Refreshing chapters...", function()
+    return Backend.refreshChapters(manga.source.id, manga.id)
+  end)
 
-  if not accept_cached_results and refresh_chapters_response.type == 'ERROR' then
+  if not accept_cached_results and refresh_chapters_response.type == "ERROR" then
     ErrorDialog:show(refresh_chapters_response.message)
 
     return
@@ -219,7 +229,7 @@ function ChapterListing:fetchAndShow(manga, onReturnCallback, accept_cached_resu
 
   local response = Backend.getSettings()
 
-  if response.type == 'ERROR' then
+  if response.type == "ERROR" then
     ErrorDialog:show(response.message)
 
     return
@@ -227,12 +237,12 @@ function ChapterListing:fetchAndShow(manga, onReturnCallback, accept_cached_resu
 
   local settings = response.body
 
-  UIManager:show(ChapterListing:new {
+  UIManager:show(ChapterListing:new({
     manga = manga,
     chapter_sorting_mode = settings.chapter_sorting_mode,
     on_return_callback = onReturnCallback,
     covers_fullscreen = true, -- hint for UIManager:_repaint()
-  })
+  }))
 
   Testing:emitEvent("chapter_listing_shown")
 end
@@ -259,14 +269,11 @@ end
 --- @private
 function ChapterListing:refreshChapters()
   Trapper:wrap(function()
-    local refresh_chapters_response = LoadingDialog:showAndRun(
-      "Refreshing chapters...",
-      function()
-        return Backend.refreshChapters(self.manga.source.id, self.manga.id)
-      end
-    )
+    local refresh_chapters_response = LoadingDialog:showAndRun("Refreshing chapters...", function()
+      return Backend.refreshChapters(self.manga.source.id, self.manga.id)
+    end)
 
-    if refresh_chapters_response.type == 'ERROR' then
+    if refresh_chapters_response.type == "ERROR" then
       ErrorDialog:show(refresh_chapters_response.message)
 
       return
@@ -283,12 +290,12 @@ function ChapterListing:openChapterOnReader(chapter, download_job)
   Trapper:wrap(function()
     -- If the download job we have is already invalid (internet problems, for example),
     -- spawn a new job before proceeding.
-    if download_job == nil or download_job:poll().type == 'ERROR' then
+    if download_job == nil or download_job:poll().type == "ERROR" then
       download_job = DownloadChapter:new(chapter.source_id, chapter.manga_id, chapter.id, chapter.chapter_num)
     end
 
     if download_job == nil then
-      ErrorDialog:show('Could not download chapter.')
+      ErrorDialog:show("Could not download chapter.")
 
       return
     end
@@ -300,24 +307,22 @@ function ChapterListing:openChapterOnReader(chapter, download_job)
       show_parent = self,
       job = download_job,
       onSuccess = function(response)
-        -- FIXME Mutating here _still_ sucks, we gotta think of a better way.
-        chapter.downloaded = true
+        local chapters = self:updateChapterList()
+
+        local updatedChapter = findOne(chapters, function(data)
+          return data.id == chapter.id
+        end)
 
         local manga_path = response.body
 
         logger.info("Waited ", time.to_ms(time.since(start_time)), "ms for download job to finish.")
 
-
-        local nextChapter = findNextChapter(self.chapters, chapter)
+        local nextChapter = findNextChapter(self.chapters, updatedChapter)
         local nextChapterDownloadJob = nil
 
         if nextChapter ~= nil then
-          nextChapterDownloadJob = DownloadChapter:new(
-            nextChapter.source_id,
-            nextChapter.manga_id,
-            nextChapter.id,
-            nextChapter.chapter_num
-          )
+          nextChapterDownloadJob =
+            DownloadChapter:new(nextChapter.source_id, nextChapter.manga_id, nextChapter.id, nextChapter.chapter_num)
         end
 
         local onReturnCallback = function()
@@ -350,13 +355,11 @@ function ChapterListing:openChapterOnReader(chapter, download_job)
         self:onClose()
       end,
       onError = function(response)
-          ErrorDialog:show(response.message)
-          return
-      end
+        ErrorDialog:show(response.message)
+      end,
     })
 
     dialog:show()
-
   end)
 end
 
@@ -373,21 +376,21 @@ function ChapterListing:openMenu()
           UIManager:close(dialog)
 
           self:onDownloadUnreadChapters()
-        end
-      }
-    }
+        end,
+      },
+    },
   }
 
-  dialog = ButtonDialog:new {
+  dialog = ButtonDialog:new({
     buttons = buttons,
-  }
+  })
 
   UIManager:show(dialog)
 end
 
 function ChapterListing:onDownloadUnreadChapters()
   local input_dialog
-  input_dialog = InputDialog:new {
+  input_dialog = InputDialog:new({
     title = "Download unread chapters...",
     input_type = "number",
     input_hint = "Amount of unread chapters (default: all)",
@@ -408,11 +411,11 @@ function ChapterListing:onDownloadUnreadChapters()
             UIManager:close(input_dialog)
 
             local amount = nil
-            if input_dialog:getInputText() ~= '' then
+            if input_dialog:getInputText() ~= "" then
               amount = tonumber(input_dialog:getInputText())
 
               if amount == nil then
-                ErrorDialog:show('Invalid amount of chapters!')
+                ErrorDialog:show("Invalid amount of chapters!")
 
                 return
               end
@@ -424,23 +427,23 @@ function ChapterListing:onDownloadUnreadChapters()
               job = job,
               dismiss_callback = function()
                 self:updateChapterList()
-              end
+              end,
             })
 
             dialog:show()
           end,
         },
-      }
-    }
-  }
+      },
+    },
+  })
 
   UIManager:show(input_dialog)
 end
 
 function ChapterListing:onDownloadAllChapters()
-  local downloadingMessage = InfoMessage:new {
+  local downloadingMessage = InfoMessage:new({
     text = "Downloading all chapters, this will take a while…",
-  }
+  })
 
   UIManager:show(downloadingMessage)
 
@@ -450,7 +453,7 @@ function ChapterListing:onDownloadAllChapters()
     local startTime = time.now()
     local response = Backend.downloadAllChapters(self.manga.source.id, self.manga.id)
 
-    if response.type == 'ERROR' then
+    if response.type == "ERROR" then
       ErrorDialog:show(response.message)
 
       return
@@ -478,7 +481,7 @@ function ChapterListing:onDownloadAllChapters()
     local onCancellationRequested = function()
       local response = Backend.cancelDownloadAllChapters(self.manga.source.id, self.manga.id)
       -- FIXME is it ok to assume there are no errors here?
-      assert(response.type == 'SUCCESS')
+      assert(response.type == "SUCCESS")
 
       cancellationRequested = true
 
@@ -486,9 +489,9 @@ function ChapterListing:onDownloadAllChapters()
     end
 
     local onCancelled = function()
-      local cancelledMessage = InfoMessage:new {
+      local cancelledMessage = InfoMessage:new({
         text = "Cancelled.",
-      }
+      })
 
       UIManager:show(cancelledMessage)
     end
@@ -503,7 +506,7 @@ function ChapterListing:onDownloadAllChapters()
       UIManager:close(downloadingMessage)
 
       local response = Backend.getDownloadAllChaptersProgress(self.manga.source.id, self.manga.id)
-      if response.type == 'ERROR' then
+      if response.type == "ERROR" then
         ErrorDialog:show(response.message)
 
         return
@@ -526,10 +529,13 @@ function ChapterListing:onDownloadAllChapters()
       elseif cancellationRequested then
         messageText = "Waiting for download to be cancelled…"
       elseif downloadProgress.type == "PROGRESSING" then
-        messageText = "Downloading all chapters, this will take a while… (" ..
-            downloadProgress.downloaded .. "/" .. downloadProgress.total .. ")." ..
-            "\n\n" ..
-            "Tap outside this message to cancel."
+        messageText = "Downloading all chapters, this will take a while… ("
+          .. downloadProgress.downloaded
+          .. "/"
+          .. downloadProgress.total
+          .. ")."
+          .. "\n\n"
+          .. "Tap outside this message to cancel."
 
         isCancellable = true
       else
@@ -538,10 +544,10 @@ function ChapterListing:onDownloadAllChapters()
         error("unexpected download progress message")
       end
 
-      downloadingMessage = InfoMessage:new {
+      downloadingMessage = InfoMessage:new({
         text = messageText,
         dismissable = isCancellable,
-      }
+      })
 
       -- Override the default `onTapClose`/`onAnyKeyPressed` actions
       if isCancellable then

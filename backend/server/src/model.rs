@@ -52,6 +52,7 @@ pub struct Chapter {
     volume_num: Option<f32>,
     read: bool,
     downloaded: bool,
+    relative_path: String,
 }
 
 impl From<DomainChapter> for Chapter {
@@ -62,10 +63,13 @@ impl From<DomainChapter> for Chapter {
             downloaded,
         }: DomainChapter,
     ) -> Self {
+
+        let source = chapter_information.id.source_id().value().clone();
+        let manga = chapter_information.id.manga_id().value().clone();
+
         Self {
-            // FIXME what the fuck why
-            source_id: chapter_information.id.source_id().value().clone(),
-            manga_id: chapter_information.id.manga_id().value().clone(),
+            source_id: source.clone(),
+            manga_id: manga.clone(),
             id: chapter_information.id.value().clone(),
             title: chapter_information.title.unwrap_or("Unknown title".into()),
             scanlator: chapter_information.scanlator,
@@ -77,6 +81,7 @@ impl From<DomainChapter> for Chapter {
                 .map(|decimal| decimal.try_into().unwrap()),
             read: state.read,
             downloaded,
+            relative_path: format!("{}-{}", manga.clone(), source.clone())
         }
     }
 }

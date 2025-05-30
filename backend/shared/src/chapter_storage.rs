@@ -32,9 +32,15 @@ impl ChapterStorage {
     }
 
     pub fn get_stored_chapter(&self, id: &ChapterId) -> Option<PathBuf> {
-        let new_path = self.path_for_chapter(id);
-        if new_path.exists() {
-            return Some(new_path);
+        let path_v2 = self.path_for_chapter_with_separate_folder(id);
+        if path_v2.exists() {
+            return Some(path_v2);
+        }
+
+        // Backwards compatibility: no folder separation
+        let path = self.path_for_chapter(id);
+        if path.exists() {
+            return Some(path);
         }
 
         // Backwards compatibility: check the old path format
@@ -48,7 +54,7 @@ impl ChapterStorage {
 
     pub fn get_path_to_store_chapter(&self, id: &ChapterId) -> PathBuf {
         // New chapters should always use the new path format
-        self.path_for_chapter(id)
+        self.path_for_chapter_with_separate_folder(id)
     }
 
     // FIXME depending on `NamedTempFile` here is pretty ugly
@@ -79,7 +85,7 @@ impl ChapterStorage {
         }
 
         // Persist using the new path format
-        let path = self.path_for_chapter(id);
+        let path = self.path_for_chapter_with_separate_folder(id);
         temporary_file.persist(&path)?;
 
         Ok(path)
@@ -173,6 +179,26 @@ impl ChapterStorage {
         let encoded_hash = general_purpose::URL_SAFE_NO_PAD.encode(hash_result);
 
         let output_filename = format!("{}.cbz", encoded_hash);
+
+        self.downloads_folder_path.join(output_filename)
+    }
+
+    fn path_for_chapter_with_separate_folder(&self, chapter_id: &ChapterId) -> PathBuf {
+        let mut hasher = Sha256::new();
+        hasher.update(chapter_id.source_id().value().as_bytes());
+        hasher.update(chapter_id.manga_id().value().as_bytes());
+        hasher.update(chapter_id.value().as_bytes());
+        let hash_result = hasher.finalize();
+
+        // Use URL-safe base64 encoding without padding for the filename
+        let encoded_hash = general_purpose::URL_SAFE_NO_PAD.encode(hash_result);
+
+        let relative_folder = format!(
+            "{}-{}",
+            chapter_id.manga_id().value().clone(),
+            chapter_id.source_id().value().clone()
+        );
+        let output_filename = format!("{}/{}.cbz", relative_folder, encoded_hash);
 
         self.downloads_folder_path.join(output_filename)
     }

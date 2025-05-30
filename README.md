@@ -58,4 +58,7 @@ Library:
   Each source - manga -> have their own separate folder
   (basically, we can create a hash to build it the hash key as folder)
 
+Todo this:
+1. Backend ??
+2. Frontend where does the file fetch information comes from...
 

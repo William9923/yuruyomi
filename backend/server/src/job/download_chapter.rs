@@ -55,6 +55,7 @@ impl Job for DownloadChapterJob {
     type Output = PathBuf;
     type Error = ErrorResponse;
 
+    // For job cancellation
     async fn cancel(&self) -> Result<(), AppError> {
         todo!()
     }

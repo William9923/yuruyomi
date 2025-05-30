@@ -35,8 +35,13 @@ pub fn routes() -> Router<State> {
             "/mangas/:source_id/:manga_id/refresh-chapters",
             post(refresh_manga_chapters),
         )
-        // FIXME i dont think the route should be named download because it doesnt
+        // FIXME: i dont think the route should be named download because it doesnt
         // always download the file...
+        //
+        // You should instead split it into 2 different endpoint:
+        // 1. chapters/:chapter_id/status -> to identify file location etc...
+        // 2 download
+        // This way, it's clear
         .route(
             "/mangas/:source_id/:manga_id/chapters/:chapter_id/download",
             post(download_manga_chapter),
