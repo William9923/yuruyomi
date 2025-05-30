@@ -1,7 +1,6 @@
 use std::fs;
 use std::os::unix::fs::MetadataExt;
 use std::path::PathBuf;
-
 use anyhow::{anyhow, Context, Result};
 use base64::{engine::general_purpose, Engine as _};
 use log::debug;
@@ -55,6 +54,17 @@ impl ChapterStorage {
     pub fn get_path_to_store_chapter(&self, id: &ChapterId) -> PathBuf {
         // New chapters should always use the new path format
         self.path_for_chapter_with_separate_folder(id)
+    }
+
+    pub fn ensure_parent_exist(&self, path: PathBuf) -> Result<()> {
+        if let Some(parent_dir) = path.parent() {
+            if !parent_dir.exists() {
+                fs::create_dir_all(parent_dir)
+                    .with_context(|| format!("Failed to create directory: {:?}", parent_dir))?;
+            };
+        }
+
+        Ok(())
     }
 
     // FIXME depending on `NamedTempFile` here is pretty ugly
@@ -193,15 +203,10 @@ impl ChapterStorage {
         // Use URL-safe base64 encoding without padding for the filename
         let encoded_hash = general_purpose::URL_SAFE_NO_PAD.encode(hash_result);
 
-        let relative_folder = format!(
-            "{}-{}",
-            chapter_id.manga_id().value().clone(),
-            chapter_id.source_id().value().clone()
-        );
         let output_filename = format!("{}.cbz", encoded_hash);
 
         self.downloads_folder_path
-            .join(&relative_folder)
+            .join(chapter_id.relative_path())
             .join(output_filename)
     }
 }

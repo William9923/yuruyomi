@@ -44,6 +44,7 @@ pub async fn ensure_chapter_is_in_storage(
     // and then commit it into the storage (or maybe a implicit commit on drop, but i dont think it works well as there
     // could be errors while committing it)
     let output_path = chapter_storage.get_path_to_store_chapter(chapter_id);
+    chapter_storage.ensure_parent_exist(output_path.clone())?;
 
     // Write chapter pages to a temporary file, so that if things go wrong
     // we do not have a borked .cbz file in the chapter storage.

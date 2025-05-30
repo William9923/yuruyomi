@@ -81,7 +81,7 @@ impl From<DomainChapter> for Chapter {
                 .map(|decimal| decimal.try_into().unwrap()),
             read: state.read,
             downloaded,
-            relative_path: format!("{}-{}", manga.clone(), source.clone())
+            relative_path: chapter_information.id.relative_path(), 
         }
     }
 }

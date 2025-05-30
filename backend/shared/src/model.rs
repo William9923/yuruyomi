@@ -89,6 +89,18 @@ impl ChapterId {
     pub fn value(&self) -> &String {
         &self.chapter_id
     }
+
+    pub fn relative_path(&self) -> String {
+        let slug = self
+            .manga_id
+            .manga_id
+            .trim_end_matches('/') // remove trailing slash
+            .rsplit('/')
+            .next()
+            .unwrap_or("");
+
+        format!("{}-{}", slug, self.source_id().source_id)
+    }
 }
 
 #[derive(Clone, Deserialize, Debug)]
