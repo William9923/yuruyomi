@@ -198,8 +198,10 @@ impl ChapterStorage {
             chapter_id.manga_id().value().clone(),
             chapter_id.source_id().value().clone()
         );
-        let output_filename = format!("{}/{}.cbz", relative_folder, encoded_hash);
+        let output_filename = format!("{}.cbz", encoded_hash);
 
-        self.downloads_folder_path.join(output_filename)
+        self.downloads_folder_path
+            .join(&relative_folder)
+            .join(output_filename)
     }
 }
