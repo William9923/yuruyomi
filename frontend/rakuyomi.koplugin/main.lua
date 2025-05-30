@@ -17,7 +17,7 @@ logger.info("Loading Rakuyomi plugin...")
 local backendInitialized, logs = Backend.initialize()
 
 local Rakuyomi = InputContainer:extend({
-  name = "rakuyomi"
+  name = "yuruyomi"
 })
 
 -- We can get initialized from two contexts:
@@ -37,7 +37,7 @@ end
 
 function Rakuyomi:addToMainMenu(menu_items)
   menu_items.rakuyomi = {
-    text = _("Rakuyomi"),
+    text = _("Yuruyomi"), -- just to differentiate naming with original Rakuyomi
     sorting_hint = "search",
     callback = function()
       if not backendInitialized then
@@ -53,7 +53,7 @@ end
 
 function Rakuyomi:showErrorDialog()
   ErrorDialog:show(
-    "Oops! Rakuyomi encountered an issue while starting up!\n" ..
+    "Oops! Yuruyomi encountered an issue while starting up!\n" ..
     "Here are some messages that might help identify the problem:\n\n" ..
     logs
   )
