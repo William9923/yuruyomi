@@ -52,7 +52,7 @@ function DownloadChapterJobDialog:pollAndCreateTextWidget()
   local message = ''
 
   if state.type == 'SUCCESS' then
-    message = self.cancellation_requested and 'Download cancelled!' or 'Download complete!'
+    message = 'Download complete!'
     if not self.cancellation_requested then
       self.onSuccess(state)
     end
