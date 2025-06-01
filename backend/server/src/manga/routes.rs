@@ -188,6 +188,8 @@ async fn download_manga_chapter(
 ) -> Result<Json<String>, AppError> {
     let chapter_id = ChapterId::from(params);
     let chapter_storage = &*chapter_storage.lock().await;
+
+    // if you really wanted to
     let output_path =
         usecases::fetch_manga_chapter(&source, chapter_storage, &chapter_id, chapter_num)
             .await

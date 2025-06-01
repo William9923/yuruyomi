@@ -29,6 +29,8 @@ pub async fn ensure_chapter_is_in_storage(
     }
 
     // FIXME like downloaderror is a really bad name??
+    // FIXME: can get number of page here, which can be used to determine status of current
+    // download
     let pages = source
         .get_page_list(
             CancellationToken::new(),
@@ -43,6 +45,7 @@ pub async fn ensure_chapter_is_in_storage(
     // FIXME this logic should be contained entirely within the storage..? maybe we could return something that's writable
     // and then commit it into the storage (or maybe a implicit commit on drop, but i dont think it works well as there
     // could be errors while committing it)
+
     let output_path = chapter_storage.get_path_to_store_chapter(chapter_id);
     chapter_storage.ensure_parent_exist(output_path.clone())?;
 

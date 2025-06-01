@@ -90,16 +90,61 @@ impl ChapterId {
         &self.chapter_id
     }
 
-    pub fn relative_path(&self) -> String {
-        let slug = self
-            .manga_id
+    pub fn chapter_number(&self) -> String {
+        let number = self.chapter_id
+            .trim_end_matches('/') // remove trailing slash
+            .rsplit('/')
+            .next()
+            .unwrap_or("")
+            .rsplit('-')
+            .next()
+            .unwrap_or("")
+            .to_string();
+
+        let padding = 5;
+        let mut result = String::new();
+        let parts: Vec<&str> = number.split('-').collect();
+
+        for (i, part) in parts.iter().enumerate() {
+            if i > 0 {
+                result.push('-');
+            }
+
+            // Try to parse as float to handle decimals like "3.5"
+            if let Ok(num) = part.parse::<f64>() {
+                let integer_part = num.floor() as u32;
+                let decimal_part = num.fract();
+
+                if decimal_part == 0.0 {
+                    // Integer chapter
+                    result.push_str(&format!("{:0width$}", integer_part, width = padding));
+                } else {
+                    // Decimal chapter (like 3.5)
+                    result.push_str(&format!(
+                        "{:0width$}.{}",
+                        integer_part,
+                        (decimal_part * 10.0) as u32,
+                        width = padding
+                    ));
+                }
+            } else {
+                // Not a number, keep as-is
+                result.push_str(part);
+            }
+        }
+
+        result
+    }
+
+
+    pub fn manga_name(&self) -> String {
+        self.manga_id
             .manga_id
             .trim_end_matches('/') // remove trailing slash
             .rsplit('/')
             .next()
-            .unwrap_or("");
-
-        format!("{}-{}", slug, self.source_id().source_id)
+            .unwrap_or("")
+            .to_string()
     }
 }
 
@@ -117,6 +162,12 @@ pub struct MangaInformation {
     pub author: Option<String>,
     pub artist: Option<String>,
     pub cover_url: Option<Url>,
+}
+
+impl MangaInformation {
+    pub fn manga_title(&self) -> Option<String> {
+        self.title.clone()
+    }
 }
 
 #[derive(Clone, Debug)]

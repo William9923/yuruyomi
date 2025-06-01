@@ -1,11 +1,11 @@
-use std::fs;
-use std::os::unix::fs::MetadataExt;
-use std::path::PathBuf;
 use anyhow::{anyhow, Context, Result};
 use base64::{engine::general_purpose, Engine as _};
 use log::debug;
 use sha2::{Digest, Sha256};
 use size::Size;
+use std::fs;
+use std::os::unix::fs::MetadataExt;
+use std::path::PathBuf;
 use tempfile::NamedTempFile;
 use walkdir::{DirEntry, WalkDir};
 
@@ -194,19 +194,13 @@ impl ChapterStorage {
     }
 
     fn path_for_chapter_with_separate_folder(&self, chapter_id: &ChapterId) -> PathBuf {
-        let mut hasher = Sha256::new();
-        hasher.update(chapter_id.source_id().value().as_bytes());
-        hasher.update(chapter_id.manga_id().value().as_bytes());
-        hasher.update(chapter_id.value().as_bytes());
-        let hash_result = hasher.finalize();
-
         // Use URL-safe base64 encoding without padding for the filename
-        let encoded_hash = general_purpose::URL_SAFE_NO_PAD.encode(hash_result);
-
-        let output_filename = format!("{}.cbz", encoded_hash);
+        let chapter_number = chapter_id.chapter_number();
+        let output_filename = format!("Chapter-{}.cbz", chapter_number);
 
         self.downloads_folder_path
-            .join(chapter_id.relative_path())
+            .join(chapter_id.source_id().value())
+            .join(chapter_id.manga_name())
             .join(output_filename)
     }
 }

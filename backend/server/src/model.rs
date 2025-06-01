@@ -52,7 +52,6 @@ pub struct Chapter {
     volume_num: Option<f32>,
     read: bool,
     downloaded: bool,
-    relative_path: String,
 }
 
 impl From<DomainChapter> for Chapter {
@@ -81,7 +80,6 @@ impl From<DomainChapter> for Chapter {
                 .map(|decimal| decimal.try_into().unwrap()),
             read: state.read,
             downloaded,
-            relative_path: chapter_information.id.relative_path(), 
         }
     }
 }
