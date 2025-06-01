@@ -6,23 +6,25 @@ local UIManager = require("ui/uimanager")
 --- @field job DownloadChapter
 --- @field show_parent unknown
 --- @field cancellation_requested boolean
+--- @field is_downloaded boolean
 --- @field dismiss_callback fun():nil|nil
 --- @field onSuccess fun(response: SuccessfulResponse<nil>|PendingResponse<PendingState>|ErrorResponse): nil
 --- @field onError fun(response: SuccessfulResponse<nil>|PendingResponse<PendingState>|ErrorResponse): nil
-local DownloadChapterJobDialog = InputContainer:extend {
+local DownloadChapterJobDialog = InputContainer:extend({
   show_parent = nil,
   modal = true,
   -- The `DownloadChapter` job.
   job = nil,
+  is_downloaded = false,
   -- If cancellation was requested.
   cancellation_requested = false,
   -- A callback to be called when dismissed.
   dismiss_callback = nil,
   -- onSuccess: A callback to be called when download success
   onSuccess = nil,
-  -- onError: A callback to be called when 
+  -- onError: A callback to be called when
   onError = nil,
-}
+})
 
 function DownloadChapterJobDialog:init()
   local widget, _ = self:pollAndCreateTextWidget()
@@ -49,31 +51,35 @@ end
 --- @private
 function DownloadChapterJobDialog:pollAndCreateTextWidget()
   local state = self.job:poll()
-  local message = ''
+  local message = ""
 
-  if state.type == 'SUCCESS' then
-    message = 'Download complete!'
+  if state.type == "SUCCESS" then
+    message = "Download complete!"
     if not self.cancellation_requested then
       self.onSuccess(state)
     end
-  elseif state.type == 'PENDING' then
+  elseif state.type == "PENDING" then
     if self.cancellation_requested then
-      message = 'Waiting until download are cancelled…'
+      message = "Waiting until download are cancelled…"
     else
-      message = 'Downloading chapter, Please wait…'
+      message = "Downloading chapter, Please wait…"
     end
-  elseif state.type == 'ERROR' then
+  elseif state.type == "ERROR" then
     self.onError(state)
   end
 
-  local is_cancellable = not self.cancellation_requested
-  local is_finished = state.type ~= 'PENDING' or self.cancellation_requested
+  if state.type ~= "ERROR" and self.is_downloaded then
+    message = "Opening downloaded chapter ..."
+  end
 
-  local widget = InfoMessage:new {
+  local is_cancellable = not self.cancellation_requested
+  local is_finished = state.type ~= "PENDING" or self.cancellation_requested
+
+  local widget = InfoMessage:new({
     modal = false,
     text = message,
     dismissable = is_cancellable or is_finished,
-  }
+  })
 
   overrideInfoMessageDismissHandler(widget, function()
     if is_cancellable then
@@ -102,7 +108,7 @@ function DownloadChapterJobDialog:updateProgress()
   local old_message_size = self[1]:getVisibleArea()
   -- Request a redraw of the component we're drawing over.
   UIManager:setDirty(self.show_parent, function()
-    return 'ui', old_message_size
+    return "ui", old_message_size
   end)
 
   local widget, is_finished = self:pollAndCreateTextWidget()
@@ -110,7 +116,7 @@ function DownloadChapterJobDialog:updateProgress()
   self.dimen = nil
 
   -- Request a redraw of ourselves.
-  UIManager:setDirty(self, 'ui')
+  UIManager:setDirty(self, "ui")
 
   if not is_finished then
     UIManager:scheduleIn(1, self.updateProgress, self)

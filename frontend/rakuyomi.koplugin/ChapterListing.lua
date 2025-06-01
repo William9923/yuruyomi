@@ -303,55 +303,59 @@ function ChapterListing:openChapterOnReader(chapter, download_job)
     local time = require("ui/time")
     local start_time = time.now()
 
+    local preloadNextChapter = function(nextChapter)
+      local nextChapterDownloadJob = nil
+      if nextChapter ~= nil then
+        nextChapterDownloadJob =
+          DownloadChapter:new(nextChapter.source_id, nextChapter.manga_id, nextChapter.id, nextChapter.chapter_num)
+      end
+
+      return nextChapterDownloadJob
+    end
+
+    local openManga = function(manga_path, nextChapter, nextChapterDownloadJob)
+      local onReturnCallback = function()
+        self:updateItems()
+
+        UIManager:show(self)
+      end
+
+      local onEndOfBookCallback = function()
+        Backend.markChapterAsRead(chapter.source_id, chapter.manga_id, chapter.id)
+
+        self:updateChapterList()
+
+        if nextChapter ~= nil then
+          logger.info("opening next chapter", nextChapter)
+          self:openChapterOnReader(nextChapter, nextChapterDownloadJob)
+        else
+          MangaReader:closeReaderUi(function()
+            UIManager:show(self)
+          end)
+        end
+      end
+
+      MangaReader:show({
+        path = manga_path,
+        on_end_of_book_callback = onEndOfBookCallback,
+        on_return_callback = onReturnCallback,
+      })
+    end
+
     local dialog = DownloadChapterJobDialog:new({
       show_parent = self,
       job = download_job,
+      is_downloaded = chapter.downloaded,
       onSuccess = function(response)
         local chapters = self:updateChapterList()
 
-        local updatedChapter = findOne(chapters, function(data)
-          return data.id == chapter.id
-        end)
+        local nextChapter = findNextChapter(chapters, chapter)
+        local nextChapterDownloadJob = preloadNextChapter(nextChapter)
 
         local manga_path = response.body
 
         logger.info("Waited ", time.to_ms(time.since(start_time)), "ms for download job to finish.")
-
-        local nextChapter = findNextChapter(self.chapters, updatedChapter)
-        local nextChapterDownloadJob = nil
-
-        if nextChapter ~= nil then
-          nextChapterDownloadJob =
-            DownloadChapter:new(nextChapter.source_id, nextChapter.manga_id, nextChapter.id, nextChapter.chapter_num)
-        end
-
-        local onReturnCallback = function()
-          self:updateItems()
-
-          UIManager:show(self)
-        end
-
-        local onEndOfBookCallback = function()
-          Backend.markChapterAsRead(chapter.source_id, chapter.manga_id, chapter.id)
-
-          self:updateChapterList()
-
-          if nextChapter ~= nil then
-            logger.info("opening next chapter", nextChapter)
-            self:openChapterOnReader(nextChapter, nextChapterDownloadJob)
-          else
-            MangaReader:closeReaderUi(function()
-              UIManager:show(self)
-            end)
-          end
-        end
-
-        MangaReader:show({
-          path = manga_path,
-          on_end_of_book_callback = onEndOfBookCallback,
-          on_return_callback = onReturnCallback,
-        })
-
+        openManga(manga_path, nextChapter, nextChapterDownloadJob)
         self:onClose()
       end,
       onError = function(response)
