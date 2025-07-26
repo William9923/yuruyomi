@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-export RAKUYOMI_SERVER_COMMAND_OVERRIDE="$(which cargo) run --manifest-path backend/Cargo.toml -p server --"
+export RAKUYOMI_SERVER_COMMAND_OVERRIDE="$(which cargo) run --manifest-path backend/Cargo.toml -p server -- $(pwd)"
 if [[ "$1" == "--debug" ]]; then
-    export RAKUYOMI_SERVER_COMMAND_OVERRIDE="$(which cargo) debugger --manifest-path backend/Cargo.toml -p server --"
+  export RAKUYOMI_SERVER_COMMAND_OVERRIDE="$(which cargo) debugger --manifest-path backend/Cargo.toml -p server -- $(pwd)"
 fi
 
 export RAKUYOMI_SERVER_WORKING_DIRECTORY="$(pwd)"
