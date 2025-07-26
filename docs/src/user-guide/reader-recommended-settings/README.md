@@ -28,7 +28,7 @@ Also in the bottom menu, go to the fourth submenu and set the **View Mode** to "
 
 ## Fit the entire page on the screen
 
-Go to the third submenu on the bottom menu, then set **Fit** to "full". This will resize the pages so that they fit completely inside your screen. 
+Go to the third submenu on the bottom menu, then set **Fit** to "full". This will resize the pages so that they fit completely inside your screen.
 
 <div align="center">
 

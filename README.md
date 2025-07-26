@@ -1,6 +1,6 @@
 # yuruyomi
 
-**yuruyomi** is a fork based on **yuruyomi** , a manga reader plugin for [KOReader](https://github.com/koreader/koreader). Just for a learning & hobby projects on free time using **rakuyomi**, one of my favourite koreader plugins.
+**yuruyomi** is a fork based on **rakuyomi** , a manga reader plugin for [KOReader](https://github.com/koreader/koreader). Just for a learning & hobby projects on free time using **rakuyomi**, one of my favourite koreader plugins.
 
 
 ## Reference

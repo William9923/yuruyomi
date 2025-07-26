@@ -6,7 +6,7 @@ local util = require("util")
 local Paths = require("Paths")
 local Platform = require("Platform")
 
-local SERVER_STARTUP_TIMEOUT_SECONDS = tonumber(os.getenv('RAKUYOMI_SERVER_STARTUP_TIMEOUT') or 300)
+local SERVER_STARTUP_TIMEOUT_SECONDS = tonumber(os.getenv('YURUYOMI_SERVER_STARTUP_TIMEOUT') or 300)
 
 --- @class Backend
 --- @field private server Server
@@ -462,12 +462,12 @@ end
 
 --- @class UpdateInfo
 --- @field public available boolean Whether an update is available
---- @field public current_version string The current version of rakuyomi
+--- @field public current_version string The current version of yuruyomi
 --- @field public latest_version string The latest available version
 --- @field public release_url string URL to the release page
 --- @field public auto_installable boolean Whether the update can be automatically installed
 
---- Checks if there is an update available for rakuyomi
+--- Checks if there is an update available for yuruyomi
 --- @return SuccessfulResponse<UpdateInfo>|ErrorResponse
 function Backend.checkForUpdates()
   return Backend.requestJson({

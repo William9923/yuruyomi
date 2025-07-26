@@ -93,8 +93,8 @@ in {
 
   # Enable cachix
   cachix = {
-    enable = false;
-    push = "rakuyomi";
+    enable = true;
+    push = "yuruyomi";
   };
 
   enterShell = ''
@@ -109,17 +109,11 @@ in {
     '';
     fix-rust-format.exec = "cd $DEVENV_ROOT/backend && cargo fmt --all";
     fix-rust-lint.exec = "cd $DEVENV_ROOT/backend && cargo clippy --fix --allow-dirty -- -D warnings";
-
-    # Legacy combined command (kept for compatibility)
     dev.exec = "cd $DEVENV_ROOT && . tools/run-koreader-with-plugin.sh";
-    debug.exec = "cd $DEVENV_ROOT && . tools/run-koreader-with-plugin.sh --debug";
-
-    # New separated development commands
     dev-backend.exec = "cd $DEVENV_ROOT && . tools/dev-backend.sh";
-    dev-backend-debug.exec = "cd $DEVENV_ROOT && . tools/dev-backend.sh --debug";
-    dev-backend-tcp.exec = "cd $DEVENV_ROOT && . tools/dev-backend.sh --tcp";
     dev-frontend.exec = "cd $DEVENV_ROOT && . tools/dev-frontend.sh";
-
+    dev-both.exec = "cd $DEVENV_ROOT && . tools/dev-both.sh";
+    debug.exec = "cd $DEVENV_ROOT && . tools/run-koreader-with-plugin.sh --debug";
     docs.exec = "cd $DEVENV_ROOT/docs && exec mdbook serve --open";
     prepare-sql-queries.exec = "cd $DEVENV_ROOT && . tools/prepare-sqlx-queries.sh";
     remote-install.exec = "cd $DEVENV_ROOT && python3 tools/install-into-remote-koreader.py";
@@ -129,7 +123,7 @@ in {
       -o StrictHostKeyChecking=no \
       "root@$REMOTE_KOREADER_HOST" "$@"
     '';
-    test-frontend.exec = "cd $DEVENV_ROOT && busted -C frontend/rakuyomi.koplugin .";
+    test-frontend.exec = "cd $DEVENV_ROOT && busted -C frontend/yuruyomi.koplugin .";
     test-e2e.exec = ''
       cd $DEVENV_ROOT/e2e-tests && \
       poetry env use $(which python) && \

@@ -28,9 +28,9 @@ class KOReaderDriver:
     def __init__(self, agent: Agent, koreader_home: Path):
         self.agent = agent
         self.koreader_home = koreader_home
-        self.rakuyomi_home = koreader_home / 'rakuyomi'
-        self.rakuyomi_home.mkdir(parents=True, exist_ok=True)
-        self.ipc_socket_path = "/tmp/rakuyomi_testing_ipc.sock"
+        self.yuruyomi_home = koreader_home / 'yuruyomi'
+        self.yuruyomi_home.mkdir(parents=True, exist_ok=True)
+        self.ipc_socket_path = "/tmp/yuruyomi_testing_ipc.sock"
         self.reader = None
         self.writer = None
 
@@ -70,7 +70,7 @@ class KOReaderDriver:
             "storage_size_limit": "2GB",
         }
 
-        with open(self.rakuyomi_home / "settings.json", "w") as f:
+        with open(self.yuruyomi_home / "settings.json", "w") as f:
             json.dump(settings, f, indent=2)
 
         self.process = await asyncio.create_subprocess_exec(
@@ -78,7 +78,7 @@ class KOReaderDriver:
             stdout=sys.stderr,
             env={
                 **os.environ,
-                'RAKUYOMI_IS_TESTING': '1',
+                'YURUYOMI_IS_TESTING': '1',
                 'KO_HOME': self.koreader_home,
             },
             process_group=0
@@ -86,7 +86,7 @@ class KOReaderDriver:
 
         # Wait for KOReader to connect via IPC
         try:
-            initialization_timeout = float(os.environ.get('RAKUYOMI_TEST_INITIALIZATION_TIMEOUT', '30'))
+            initialization_timeout = float(os.environ.get('YURUYOMI_TEST_INITIALIZATION_TIMEOUT', '30'))
 
             async with asyncio.timeout(initialization_timeout):
                 while not self.reader:

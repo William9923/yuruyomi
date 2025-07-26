@@ -2,7 +2,7 @@
 set -ev
 
 export BACKEND_SHARED_DIR="${DEVENV_ROOT}/backend/shared"
-export DATABASE_URL="sqlite:/tmp/rakuyomi.db"
+export DATABASE_URL="sqlite:/tmp/yuruyomi.db"
 
 cd "$BACKEND_SHARED_DIR"
 

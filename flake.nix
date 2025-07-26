@@ -84,7 +84,7 @@
           };
 
           pluginFolderWithoutServer = with pkgs; stdenv.mkDerivation {
-            name = "rakuyomi-plugin-without-server";
+            name = "yuruyomi-plugin-without-server";
             # Filter out unittests (*_spec.lua) files.
             src = lib.fileset.toSource {
               root = ./frontend;
@@ -93,7 +93,7 @@
             phases = [ "unpackPhase" "installPhase" ];
             installPhase = ''
               mkdir $out
-              cp -r $src/rakuyomi.koplugin/* $out/
+              cp -r $src/yuruyomi.koplugin/* $out/
             '';
           };
 
@@ -104,7 +104,7 @@
               buildInfoFile = mkBuildInfoFile buildName;
             in
               with pkgs; stdenv.mkDerivation {
-                name = "rakuyomi-plugin";
+                name = "yuruyomi-plugin";
                 phases = [ "installPhase" ];
                 installPhase = ''
                   mkdir $out
@@ -116,11 +116,17 @@
               };
 
           koreader = pkgs.callPackage ./packages/koreader.nix {};
-          
-          koreaderWithRakuyomiFrontend = pkgs.callPackage ./packages/koreader.nix {
+
+          # Fast development version - uses external binaries via environment variables
+          koreaderWithYuruyomiFrontendDev = pkgs.callPackage ./packages/koreader.nix {
             plugins = [ pluginFolderWithoutServer ];
           };
-          
+
+          # Full version with embedded binaries - for production builds
+          koreaderWithYuruyomiFrontend = pkgs.callPackage ./packages/koreader.nix {
+            plugins = [ (mkPluginFolderWithServer { buildName = "development"; target = desktopTarget; }) ];
+          };
+
           # FIXME this is really bad and relies on `mkCliPackage` copying the _entire_
           # target folder to the nix store (which is really bad too)
           mkSchemaFile = target:
@@ -128,14 +134,14 @@
               shared = mkSharedPackage target;
             in
               with pkgs; stdenv.mkDerivation {
-                name = "rakuyomi-settings-schema";
+                name = "yuruyomi-settings-schema";
                 phases = [ "installPhase" ];
                 installPhase = ''
                   cp ${shared}/target/${target}/release/settings.schema.json $out
                 '';
               };
 
-          cargoDebugger = 
+          cargoDebugger =
             let
               pkgs = import nixpkgs {
                 inherit system;
@@ -161,18 +167,19 @@
           kindlehf = kindlehfTarget;
         };
 
-        builds = (builtins.mapAttrs 
+        builds = (builtins.mapAttrs
           (name: target: mkPluginFolderWithServer { buildName = name; target = target; })
           buildTargets
         );
       in {
-        packages.koreader = koreader;
-        packages.rakuyomi = builds // {
-          koreader-with-plugin = koreaderWithRakuyomiFrontend;
+        packages = {
+          koreader = koreader;
+          koreader-with-plugin = koreaderWithYuruyomiFrontend;
+          koreader-with-plugin-dev = koreaderWithYuruyomiFrontendDev;
           shared = mkSharedPackage desktopTarget;
           settings-schema = mkSchemaFile desktopTarget;
-        };
-        packages.cargo-debugger = cargoDebugger;
+          cargo-debugger = cargoDebugger;
+        } // builds;
       }
     );
 }

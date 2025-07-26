@@ -29,15 +29,16 @@ done
 
 # Set working directory
 WORKING_DIR="$(pwd)"
-echo "Starting rakuyomi backend from: $WORKING_DIR"
+echo "Starting yuruyomi backend from: $WORKING_DIR"
 
 # Set environment variables
-export RAKUYOMI_SERVER_WORKING_DIRECTORY="$WORKING_DIR"
+export YURUYOMI_SERVER_WORKING_DIRECTORY="$WORKING_DIR"
 export RUST_LOG="${RUST_LOG:-info}"
 
 # Enable TCP if requested
 if [[ "$ENABLE_TCP" == "1" ]]; then
-  export RAKUYOMI_ENABLE_TCP=1
+
+  export YURUYOMI_ENABLE_TCP=1
   echo "TCP endpoint enabled on http://127.0.0.1:8080"
 fi
 

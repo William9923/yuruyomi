@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# Start only KOReader with the yuruyomi plugin
-# Usage: dev-frontend [--no-server-check]
+# Ultra-fast frontend development - uses system KOReader with plugin symlink
+# Usage: dev-frontend-fast [--no-server-check]
 
 set -e
 
@@ -16,14 +16,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     *)
       echo "Unknown option: $1"
-      echo "Usage: dev-frontend [--no-server-check]"
+      echo "Usage: dev-frontend-fast [--no-server-check]"
       exit 1
       ;;
   esac
 done
 
 WORKING_DIR="$(pwd)"
-echo "Starting yuruyomi frontend from: $WORKING_DIR"
+echo "Starting yuruyomi frontend (fast mode) from: $WORKING_DIR"
 
 # Check if backend is running (unless disabled)
 if [[ "$CHECK_SERVER" == "1" ]]; then
@@ -35,7 +35,7 @@ if [[ "$CHECK_SERVER" == "1" ]]; then
     echo "  dev-backend"
     echo ""
     echo "Or skip this check with:"
-    echo "  dev-frontend --no-server-check"
+    echo "  dev-frontend-fast --no-server-check"
     exit 1
   fi
 
@@ -55,16 +55,20 @@ fi
 # Set environment variables for frontend
 export YURUYOMI_SERVER_COMMAND_OVERRIDE="echo 'Using external backend server'"
 export YURUYOMI_SERVER_WORKING_DIRECTORY="$WORKING_DIR"
-
-# Build uds_http_request if it doesn't exist
-UDS_BINARY="$WORKING_DIR/backend/target/debug/uds_http_request"
-if [[ ! -f "$UDS_BINARY" ]]; then
-    echo "Building uds_http_request binary..."
-    cd "$WORKING_DIR" && cargo build --manifest-path backend/Cargo.toml -p uds_http_request
-fi
-
-export YURUYOMI_UDS_HTTP_REQUEST_COMMAND_OVERRIDE="$UDS_BINARY"
+export YURUYOMI_UDS_HTTP_REQUEST_COMMAND_OVERRIDE="$(which cargo) run --manifest-path backend/Cargo.toml -p uds_http_request --"
 export YURUYOMI_UDS_HTTP_REQUEST_WORKING_DIRECTORY="$WORKING_DIR"
 
-echo "Starting KOReader with yuruyomi plugin..."
-exec nix run .#koreader-with-plugin-dev -- "$HOME"
+# Use system KOReader if available, otherwise fall back to nix
+if command -v koreader > /dev/null 2>&1; then
+    echo "Using system KOReader with plugin from source..."
+
+    # Create temp plugin directory
+    TEMP_PLUGIN_DIR=$(mktemp -d)
+    cp -r frontend/yuruyomi.koplugin "$TEMP_PLUGIN_DIR/"
+
+    echo "Starting KOReader with temporary plugin directory: $TEMP_PLUGIN_DIR"
+    exec koreader --plugins="$TEMP_PLUGIN_DIR" "$HOME"
+else
+    echo "System KOReader not found, falling back to nix version..."
+    exec nix run .#koreader-with-plugin-dev -- "$HOME"
+fi

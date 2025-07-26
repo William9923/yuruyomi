@@ -39,7 +39,7 @@ struct Args {
     home_path: PathBuf,
 }
 
-const SOCKET_PATH: &str = "/tmp/rakuyomi.sock";
+const SOCKET_PATH: &str = "/tmp/yuruyomi.sock";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -53,7 +53,7 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     info!(
-        "starting rakuyomi, version: {}",
+        "starting yuruyomi, version: {}",
         get_build_info()
             .map(|info| info.format_display())
             .unwrap_or_else(|| "unknown".into())
@@ -61,7 +61,7 @@ async fn main() -> anyhow::Result<()> {
 
     let args = Args::parse();
     fs::create_dir_all(&args.home_path)
-        .context("while trying to ensure rakuyomi's home folder exists")?;
+        .context("while trying to ensure yuruyomi's home folder exists")?;
 
     let sources_path = args.home_path.join("sources");
     let database_path = args.home_path.join("database.db");
@@ -111,7 +111,7 @@ async fn main() -> anyhow::Result<()> {
     info!("server listening on Unix socket: {}", SOCKET_PATH);
 
     // Optional: Add TCP listener for easier testing
-    if std::env::var("RAKUYOMI_ENABLE_TCP").is_ok() {
+    if std::env::var("YURUYOMI_ENABLE_TCP").is_ok() {
         let tcp_listener = tokio::net::TcpListener::bind("127.0.0.1:8080")
             .await
             .context("failed to bind to TCP port")?;

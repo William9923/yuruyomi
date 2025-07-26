@@ -10,12 +10,12 @@ local must = platformUtil.must
 local SubprocessOutputCapturer = platformUtil.SubprocessOutputCapturer
 local rapidjson = require("rapidjson")
 
-local SERVER_COMMAND_WORKING_DIRECTORY = os.getenv('RAKUYOMI_SERVER_WORKING_DIRECTORY')
-local SERVER_COMMAND_OVERRIDE = os.getenv('RAKUYOMI_SERVER_COMMAND_OVERRIDE')
-local REQUEST_COMMAND_WORKING_DIRECTORY = os.getenv('RAKUYOMI_UDS_HTTP_REQUEST_WORKING_DIRECTORY')
-local REQUEST_COMMAND_OVERRIDE = os.getenv('RAKUYOMI_UDS_HTTP_REQUEST_COMMAND_OVERRIDE')
+local SERVER_COMMAND_WORKING_DIRECTORY = os.getenv('YURUYOMI_SERVER_WORKING_DIRECTORY')
+local SERVER_COMMAND_OVERRIDE = os.getenv('YURUYOMI_SERVER_COMMAND_OVERRIDE')
+local REQUEST_COMMAND_WORKING_DIRECTORY = os.getenv('YURUYOMI_UDS_HTTP_REQUEST_WORKING_DIRECTORY')
+local REQUEST_COMMAND_OVERRIDE = os.getenv('YURUYOMI_UDS_HTTP_REQUEST_COMMAND_OVERRIDE')
 
-local SOCKET_PATH = '/tmp/rakuyomi.sock'
+local SOCKET_PATH = '/tmp/yuruyomi.sock'
 
 ---@class UnixServer: Server
 ---@field private pid number
