@@ -132,13 +132,9 @@ function AvailableSourcesListing:installSource(source_information)
   Trapper:wrap(function()
     local response = LoadingDialog:showAndRun(
       "Installing source...",
-      function() return Backend.installSource(source_information.id) end
+      function() return Backend.installSource(source_information.id) end,
+      false
     )
-
-    if response == nil then
-      ErrorDialog:show("Installation was cancelled or failed.")
-      return
-    end
 
     if response.type == 'ERROR' then
       ErrorDialog:show(response.message)
@@ -177,7 +173,7 @@ function AvailableSourcesListing:fetchAndShow(onReturnCallback)
 
   local available_sources_response = LoadingDialog:showAndRun("Fetching available sources...", function()
     return Backend.listAvailableSources()
-  end)
+  end, false)
 
   if available_sources_response.type == 'ERROR' then
     ErrorDialog:show(available_sources_response.message)

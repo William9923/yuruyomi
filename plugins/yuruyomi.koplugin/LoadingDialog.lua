@@ -13,19 +13,24 @@ local LoadingDialog = {}
 --- @generic T: any
 --- @param message string The message to be shown on the dialog.
 --- @param runnable fun(): T The function to be ran while showing the dialog.
+--- @param dismissable boolean Whether the dialog can be dismissed by the user.
 --- @return T
-function LoadingDialog:showAndRun(message, runnable)
+function LoadingDialog:showAndRun(message, runnable, dismissable)
   assert(Trapper:isWrapped(), "expected to be called inside a function wrapped with `Trapper:wrap()`")
 
- local message_dialog = InfoMessage:new {
+  local message_dialog = InfoMessage:new {
     text = _(message),
-    dismissable = true,
+    dismissable = dismissable,
   }
 
   UIManager:show(message_dialog)
   UIManager:forceRePaint()
 
-  local completed, return_values = Trapper:dismissableRunInSubprocess(runnable, dialog)
+  local completed, return_values = Trapper:dismissableRunInSubprocess(runnable, message_dialog)
+  if not dismissable then
+    assert(completed, "expected runnable to complete without being cancelled")
+  end
+
   if not completed then
     return nil
   end

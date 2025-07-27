@@ -97,13 +97,9 @@ function UpdateChecker:installUpdate(version)
       _("Updating rakuyomi, please wait..."),
       function()
         return Backend.installUpdate(version)
-      end
+      end,
+      false
     )
-
-    if response == nil then
-      ErrorDialog:show("Update was cancelled or failed.")
-      return
-    end
 
     if response.type == "ERROR" then
       ErrorDialog:show(response.message)

@@ -88,13 +88,9 @@ end
 function MangaSearchResults:searchAndShow(search_text, onReturnCallback)
   local response = LoadingDialog:showAndRun(
     "Searching for \"" .. search_text .. "\"",
-    function() return Backend.searchMangas(search_text) end
+    function() return Backend.searchMangas(search_text) end,
+    false
   )
-
-  if response == nil then
-    ErrorDialog:show("Search was cancelled or failed.")
-    return
-  end
 
   if response.type == 'ERROR' then
     ErrorDialog:show(response.message)

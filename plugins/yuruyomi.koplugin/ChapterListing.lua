@@ -261,18 +261,9 @@ function ChapterListing:fetchAndShow(manga, onReturnCallback, accept_cached_resu
     "Refreshing chapters...",
     function()
       return Backend.refreshChapters(manga.source.id, manga.id)
-    end
+    end,
+    false
   )
-
-  if refresh_chapters_response == nil and not accept_cached_results then
-    ErrorDialog:show("Failed to refresh chapters or cancelled.")
-    return
-  end
-
-  if refresh_chapters_response == nil then
-    ErrorDialog:show("Failed to refresh chapters or cancelled.")
-    return
-  end
 
   if not accept_cached_results and refresh_chapters_response.type == 'ERROR' then
     ErrorDialog:show(refresh_chapters_response.message)
@@ -326,13 +317,9 @@ function ChapterListing:refreshChapters()
       "Refreshing chapters...",
       function()
         return Backend.refreshChapters(self.manga.source.id, self.manga.id)
-      end
+      end,
+      false
     )
-
-    if refresh_chapters_response == nil then
-      ErrorDialog:show("Failed to refresh chapters or cancelled.")
-      return
-    end
 
     if refresh_chapters_response.type == 'ERROR' then
       ErrorDialog:show(refresh_chapters_response.message)
@@ -367,7 +354,8 @@ function ChapterListing:openChapterOnReader(chapter, download_job)
       "Downloading chapter...",
       function()
         return download_job:runUntilCompletion()
-      end
+      end,
+      true
     )
 
     if response == nil then
