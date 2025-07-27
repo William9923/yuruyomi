@@ -1,3 +1,4 @@
+local time = require("ui/time")
 local BD = require("ui/bidi")
 local ButtonDialog = require("ui/widget/buttondialog")
 local InfoMessage = require("ui/widget/infomessage")
@@ -335,15 +336,94 @@ end
 --- @param download_job DownloadChapter|nil
 function ChapterListing:openChapterOnReader(chapter, download_job)
   Trapper:wrap(function()
-    self:_openChapterOnReaderBlocking(chapter, download_job)
+    self:_openChapterOnReaderV2(chapter, download_job)
   end)
 end
 
 
 --- @private
 --- @param chapter Chapter
+--- @param download_job CancellableJob|nil
+function ChapterListing:_openChapterOnReaderV2(chapter, download_job)
+
+    -- If the download job we have is already invalid (internet problems, for example),
+    -- spawn a new job before proceeding.
+    if download_job == nil or download_job:poll().type == 'ERROR' then
+      download_job = CancellableJob:new(1.5,15,3)
+    end
+
+    if download_job == nil then
+      ErrorDialog:show('Could not download chapter.')
+      return
+    end
+
+    local start_time = time.now()
+
+    local progress_dialog
+    progress_dialog = ButtonDialog:new {
+      title = ("Downloading chapter ..."),
+      title_align = "center",
+      buttons = {
+        {
+          {
+            text = "Cancel",
+            callback = function()
+              -- download_job:cancel()
+              UIManager:close(progress_dialog)
+            end,
+          },
+        }
+      }
+    }
+
+    UIManager:show(progress_dialog)
+
+
+    -- TODO: basically it doesn't have startDownload method
+    if not download_job.startDownload or type(download_job.startDownload) ~= "function" then
+      logger.err("Download job missing startDownload method:", type(download_job.startDownload))
+      return
+    end
+
+    download_job:startDownload(
+      chapter.source_id,
+      chapter.manga_id,
+      chapter.id,
+      chapter.chapter_num,
+      -- onProgress callback
+      function(progress)
+        progress_dialog:setText(("Downloading chapter... %d%%"):format(progress))
+        UIManager:setDirty(progress_dialog, "ui")
+      end,
+      -- onComplete
+      function(manga_path)
+        -- Ensure dialog is closed before proceeding
+        UIManager:close(progress_dialog)
+        self:_openReaderWithPathV2(self.chapters, chapter, manga_path)
+
+        logger.info("Download completed in ", time.to_ms(time.since(start_time)), "ms.")
+      end,
+      -- onError callback
+      function(error_message)
+        -- Ensure dialog is closed before showing error
+        UIManager:close(progress_dialog)
+        ErrorDialog:show("Download failed. Please try again.")
+        logger.warn("Chapter download failed for security reasons")
+      end,
+      -- onCancel callback
+      function()
+        -- Ensure dialog is closed (although the cancel button already does this)
+        UIManager:close(progress_dialog)
+        logger.info("Chapter download cancelled by user")
+      end
+    )
+end
+
+
+--- @private
+--- @param chapter Chapter
 --- @param download_job DownloadChapter|nil
-function ChapterListing:_openChapterOnReaderBlocking(chapter, downloadJob)
+function ChapterListing:_openChapterOnReader(chapter, download_job)
     -- If the download job we have is already invalid (internet problems, for example),
     -- spawn a new job before proceeding.
     if download_job == nil or download_job:poll().type == 'ERROR' then
@@ -415,6 +495,7 @@ function ChapterListing:_openReaderWithPath(all_chapters, chapter, manga_path)
 
     self:updateChapterList()
 
+    -- TODO: instead of opening a download job, should immediately verify if file exist / not
     if nextChapter ~= nil then
       logger.info("opening next chapter", nextChapter)
       self:openChapterOnReader(nextChapter, nextChapterDownloadJob)
@@ -432,6 +513,287 @@ function ChapterListing:_openReaderWithPath(all_chapters, chapter, manga_path)
   })
 
   self:onClose()
+end
+
+
+--- @private
+--- @param chapter Chapter
+--- @param manga_path string
+function ChapterListing:_openReaderWithPathV2(all_chapters, chapter, manga_path)
+  -- Preload next chapter download job (non-blocking)
+  local nextChapter = findNextChapter(all_chapters, chapter)
+  local nextChapterDownloadJob = nil
+  local nextChapterPath = nil -- Store the downloaded path when ready
+
+  if nextChapter ~= nil then
+    nextChapterDownloadJob = CancellableJob:new(2,30,3)
+    nextChapterDownloadJob:startDownload(
+      nextChapter.source_id,
+      nextChapter.manga_id,
+      nextChapter.id,
+      nextChapter.chapter_num,
+      -- onProgress callback (should be empty for next chapter)
+      function(msg)
+        logger.info("Preloading next chapter download progress: " .. msg)
+      end,
+      -- onComplete callback - STORE PATH for later use
+      function(manga_path_result)
+        if manga_path_result and not manga_path_result:find("%.%.") then
+          nextChapterPath = manga_path_result
+          nextChapter.downloaded = true
+          logger.info("Background download completed for next chapter:", nextChapter.title or "unknown")
+        else
+          logger.warn("Invalid background download path received")
+          nextChapterDownloadJob = nil -- Mark as failed
+        end
+      end,
+      -- onError callback - SILENT ERROR HANDLING (don't interrupt reading)
+      function(error_message)
+        logger.warn("Background download failed for next chapter:", error_message)
+        nextChapterDownloadJob = nil -- Mark as failed, will fall back to on-demand download
+      end,
+      -- onCancel callback - SILENT CANCELLATION
+      function()
+        logger.info("Background download cancelled for next chapter")
+        nextChapterDownloadJob = nil
+      end
+    )
+  end
+
+
+  local onReturnCallback = function()
+    self:updateItems()
+    UIManager:show(self)
+  end
+
+  local onEndOfBookCallback = function()
+    -- Secure API call with timeout
+    local mark_read_response = Backend.markChapterAsRead(chapter.source_id, chapter.manga_id, chapter.id)
+
+    if mark_read_response.type == 'ERROR' then
+      logger.warn("Failed to mark chapter as read:", mark_read_response.message)
+      -- Continue anyway - don't block user experience
+    end
+
+    self:updateChapterList()
+
+    if nextChapter ~= nil then
+      if nextChapterPath then
+        -- If we have a predownloaded path, show choice dialog
+        self:_showNextChapterChoiceWithPredownload(nextChapter, nextChapterPath)
+      else
+        -- Otherwise, show download choice dialog
+        self:_showNextChapterChoiceWithDownload(nextChapter)
+      end
+    else
+      MangaReader:closeReaderUi(function()
+        UIManager:show(self)
+      end)
+    end
+  end
+
+  MangaReader:show({
+    path = manga_path,
+    on_end_of_book_callback = onEndOfBookCallback,
+    on_return_callback = onReturnCallback,
+  })
+
+  self:onClose()
+end
+
+
+--- Shows choice dialog when next chapter is already downloaded in background
+--- @private
+--- @param nextChapter Chapter
+--- @param predownloadedPath string
+function ChapterListing:_showNextChapterChoiceWithPredownload(nextChapter, predownloadedPath)
+  -- SECURITY: Input validation
+  if not nextChapter or not predownloadedPath then
+    logger.err("Invalid parameters for predownloaded chapter choice")
+    self:_showNextChapterChoiceWithDownload(nextChapter) -- Fallback
+    return
+  end
+
+  local choice_dialog
+  choice_dialog = ButtonDialog:new{
+    title = "Chapter finished!" .. "\n" .. "(Next chapter ready)",
+    title_align = "center",
+    buttons = {
+      {
+        {
+          text = "Read Next Chapter" .. " " .. Icons.FA_BOLT, -- Lightning bolt indicates instant
+          callback = function()
+            UIManager:close(choice_dialog)
+            -- Instantly open - no download needed!
+            self:_openReaderWithPathV2(self.chapters, nextChapter, predownloadedPath)
+          end,
+        },
+      },
+      {
+        {
+          text = "Back to Chapter List",
+          callback = function()
+            UIManager:close(choice_dialog)
+            MangaReader:closeReaderUi(function()
+              UIManager:show(self)
+            end)
+          end,
+        },
+      },
+    },
+  }
+
+  UIManager:show(choice_dialog)
+end
+
+--- Shows choice dialog when next chapter needs to be downloaded
+--- @private
+--- @param nextChapter Chapter
+function ChapterListing:_showNextChapterChoiceWithDownload(nextChapter)
+  -- SECURITY: Input validation
+  if not nextChapter or not nextChapter.source_id or not nextChapter.manga_id or not nextChapter.id then
+    logger.err("Invalid next chapter data")
+    ErrorDialog:show("Invalid next chapter data")
+    return
+  end
+
+  local choice_dialog
+  choice_dialog = ButtonDialog:new{
+    title = "Chapter finished!",
+    title_align = "center",
+    buttons = {
+      {
+        {
+          text = "Read Next Chapter",
+          callback = function()
+            UIManager:close(choice_dialog)
+            -- Start cancellable download for next chapter
+            self:_downloadAndOpenNextChapter(nextChapter)
+          end,
+        },
+      },
+      {
+        {
+          text = "Back to Chapter List",
+          callback = function()
+            UIManager:close(choice_dialog)
+            MangaReader:closeReaderUi(function()
+              UIManager:show(self)
+            end)
+          end,
+        },
+      },
+    },
+  }
+
+  UIManager:show(choice_dialog)
+end
+
+--- Downloads and opens next chapter with cancellable progress dialog (when background download failed)
+--- @private
+--- @param nextChapter Chapter
+function ChapterListing:_downloadAndOpenNextChapter(nextChapter)
+  -- SECURITY: Input validation
+  if not nextChapter then
+    logger.err("No next chapter to download")
+    ErrorDialog:show("Invalid next chapter")
+    return
+  end
+
+  -- Create secure cancellable download instance
+  local cancellable_download = CancellableJob:new(1.5, 15, 3)
+  local time = require("ui/time")
+  local start_time = time.now()
+
+  -- Create progress dialog with cancel button - ONLY SHOWN DURING DOWNLOAD
+  local progress_dialog = ButtonDialog:new{
+    title = "Downloading next chapter...",
+    title_align = "center",
+    buttons = {
+      {
+        {
+          text = "Cancel",
+          callback = function()
+            cancellable_download:cancel()
+            UIManager:close(progress_dialog)
+            logger.info("User cancelled next chapter download")
+
+            -- Return to chapter list on cancellation
+            MangaReader:closeReaderUi(function()
+              UIManager:show(self)
+            end)
+          end,
+        },
+      },
+    },
+  }
+
+  UIManager:show(progress_dialog)
+
+  -- Start the secure cancellable download
+  cancellable_download:startDownload(
+    nextChapter.source_id,
+    nextChapter.manga_id,
+    nextChapter.id,
+    nextChapter.chapter_num,
+    -- onProgress callback - SECURE UI UPDATES
+    function(message)
+      if progress_dialog then
+        -- SECURITY: Sanitize message to prevent injection attacks
+        local safe_message = util.htmlEscape(tostring(message or ""))
+        progress_dialog:setTitle(safe_message)
+        UIManager:setDirty(progress_dialog, "ui")
+      end
+    end,
+    -- onComplete callback - SECURE SUCCESS HANDLING
+    function(manga_path)
+      UIManager:close(progress_dialog)
+
+      -- SECURITY: Validate file path - prevent path traversal
+      if not manga_path or manga_path == "" or manga_path:find("%.%.") then
+        ErrorDialog:show("Invalid download path received")
+        logger.warn("Suspicious download path received:", util.getSafeFilename(manga_path or "nil", "", 20))
+
+        -- Return to chapter list on error
+        MangaReader:closeReaderUi(function()
+          UIManager:show(self)
+        end)
+        return
+      end
+
+      -- SECURITY: Secure state mutation
+      if nextChapter and type(nextChapter) == "table" then
+        nextChapter.downloaded = true
+      end
+
+      logger.info("Next chapter download completed in", time.to_ms(time.since(start_time)), "ms")
+
+      -- Recursively open next chapter (this will handle the next-next chapter when finished)
+      self:_openReaderWithPathV2(self.chapters, nextChapter, manga_path)
+    end,
+    -- onError callback - SECURE ERROR HANDLING
+    function(error_message)
+      UIManager:close(progress_dialog)
+      -- SECURITY: Show generic error to user
+      ErrorDialog:show("Download failed. Returning to chapter list.")
+      logger.warn("Next chapter download failed:", error_message)
+
+      -- Return to chapter list on error
+      MangaReader:closeReaderUi(function()
+        UIManager:show(self)
+      end)
+    end,
+    -- onCancel callback - SECURE CANCELLATION HANDLING
+    function()
+      UIManager:close(progress_dialog)
+      logger.info("Next chapter download cancelled by user")
+
+      -- Return to chapter list on cancellation
+      MangaReader:closeReaderUi(function()
+        UIManager:show(self)
+      end)
+    end
+  )
 end
 
 --- @private
