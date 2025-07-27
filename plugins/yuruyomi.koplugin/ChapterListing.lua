@@ -802,6 +802,10 @@ function ChapterListing:openMenu()
 
   local buttons = {
     {
+      -- TODO: add few custom to buttons here (following Mihon)
+      -- 1. Quickly download unread chapters on various numbers
+      -- 2. Quickly change the sorting
+      -- 3. Only show unread chapters
       {
         text = Icons.FA_DOWNLOAD .. " Download unread chapters…",
         callback = function()
@@ -810,6 +814,8 @@ function ChapterListing:openMenu()
           self:onDownloadUnreadChapters()
         end
       }
+      -- TODO: add to library button
+      -- TODO: add make unread / remove read chapters
     }
   }
 
