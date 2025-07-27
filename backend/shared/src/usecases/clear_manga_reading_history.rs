@@ -37,7 +37,6 @@ pub async fn clear_manga_reading_history(db: &Database, manga_id: MangaId) -> Re
         source_id
     );
 
-    let unread_state = ChapterState { read: false };
     let mut read_count = 0u32;
 
     for chapter_info in &chapter_informations {
@@ -45,7 +44,13 @@ pub async fn clear_manga_reading_history(db: &Database, manga_id: MangaId) -> Re
             if chapter_state.read {
                 read_count += 1;
 
-                db.upsert_chapter_state(&chapter_info.id, unread_state)
+                #[allow(clippy::needless_update)]
+                let updated_chapter_state = ChapterState {
+                    read: false,
+                    ..chapter_state
+                };
+
+                db.upsert_chapter_state(&chapter_info.id, updated_chapter_state)
                     .await;
             }
         }

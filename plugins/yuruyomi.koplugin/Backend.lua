@@ -528,7 +528,7 @@ end
 --- @return SuccessfulResponse<OperationResult>|ErrorResponse
 function Backend.clearMangaReadingHistory(source_id, manga_id)
   return Backend.requestJson({
-    path = "/mangas/" .. source_id .. "/" .. manga_id .. "/reading-history",
+    path = "/mangas/" .. source_id .. "/" .. util.urlEncode(manga_id) .. "/reading-history",
     method = "DELETE"
   })
 end
