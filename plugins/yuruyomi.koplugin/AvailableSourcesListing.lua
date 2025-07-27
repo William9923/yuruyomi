@@ -135,6 +135,11 @@ function AvailableSourcesListing:installSource(source_information)
       function() return Backend.installSource(source_information.id) end
     )
 
+    if response == nil then
+      ErrorDialog:show("Installation was cancelled or failed.")
+      return
+    end
+
     if response.type == 'ERROR' then
       ErrorDialog:show(response.message)
 

@@ -100,6 +100,11 @@ function UpdateChecker:installUpdate(version)
       end
     )
 
+    if response == nil then
+      ErrorDialog:show("Update was cancelled or failed.")
+      return
+    end
+
     if response.type == "ERROR" then
       ErrorDialog:show(response.message)
       return

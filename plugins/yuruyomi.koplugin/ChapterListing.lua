@@ -94,9 +94,9 @@ end
 -- Load saved scanlator preference from backend
 function ChapterListing:loadSavedScanlatorPreference()
   local response = Backend.getPreferredScanlator(self.manga.source.id, self.manga.id)
-  
+
   self.selected_scanlator = nil
-  
+
   if response.type == 'SUCCESS' and response.body then
     for _, available_scanlator in ipairs(self.available_scanlators) do
       if available_scanlator == response.body then
@@ -111,7 +111,7 @@ end
 function ChapterListing:extractAvailableScanlators()
   local scanlators = {}
   local scanlator_set = {}
-  
+
   for _, chapter in ipairs(self.chapters) do
     local scanlator = chapter.scanlator or "Unknown"
     if not scanlator_set[scanlator] then
@@ -119,9 +119,9 @@ function ChapterListing:extractAvailableScanlators()
       table.insert(scanlators, scanlator)
     end
   end
-  
+
   table.sort(scanlators)
-  
+
   self.available_scanlators = scanlators
 end
 
@@ -264,6 +264,16 @@ function ChapterListing:fetchAndShow(manga, onReturnCallback, accept_cached_resu
     end
   )
 
+  if refresh_chapters_response == nil and not accept_cached_results then
+    ErrorDialog:show("Failed to refresh chapters or cancelled.")
+    return
+  end
+
+  if refresh_chapters_response == nil then
+    ErrorDialog:show("Failed to refresh chapters or cancelled.")
+    return
+  end
+
   if not accept_cached_results and refresh_chapters_response.type == 'ERROR' then
     ErrorDialog:show(refresh_chapters_response.message)
 
@@ -319,6 +329,11 @@ function ChapterListing:refreshChapters()
       end
     )
 
+    if refresh_chapters_response == nil then
+      ErrorDialog:show("Failed to refresh chapters or cancelled.")
+      return
+    end
+
     if refresh_chapters_response.type == 'ERROR' then
       ErrorDialog:show(refresh_chapters_response.message)
 
@@ -355,9 +370,13 @@ function ChapterListing:openChapterOnReader(chapter, download_job)
       end
     )
 
+    if response == nil then
+      ErrorDialog:show("Download was cancelled or failed.")
+      return
+    end
+
     if response.type == 'ERROR' then
       ErrorDialog:show(response.message)
-
       return
     end
 
@@ -417,6 +436,9 @@ function ChapterListing:openMenu()
 
   local buttons = {
     {
+      -- add to library
+      -- refresh chapters list
+      -- download unread 5, 10, 15
       {
         text = Icons.FA_DOWNLOAD .. " Download unread chapters…",
         callback = function()
@@ -425,15 +447,17 @@ function ChapterListing:openMenu()
           self:onDownloadUnreadChapters()
         end
       }
+      -- remove download
+      -- remove histories
     }
   }
 
   -- Add scanlator filter button if multiple scanlators exist
   if #self.available_scanlators > 1 then
-    local scanlator_text = self.selected_scanlator and 
-      (Icons.FA_FILTER .. " Group: " .. self.selected_scanlator) or 
+    local scanlator_text = self.selected_scanlator and
+      (Icons.FA_FILTER .. " Group: " .. self.selected_scanlator) or
       Icons.FA_FILTER .. " Filter by Group"
-    
+
     table.insert(buttons, {
       {
         text = scanlator_text,
@@ -464,9 +488,9 @@ function ChapterListing:showScanlatorDialog()
       callback = function()
         UIManager:close(dialog)
         self.selected_scanlator = nil
-        
+
         Backend.setPreferredScanlator(self.manga.source.id, self.manga.id, nil)
-        
+
         self:updateItems()
         UIManager:show(InfoMessage:new { text = "Showing all groups", timeout = 1 })
       end
@@ -477,16 +501,16 @@ function ChapterListing:showScanlatorDialog()
   for _, scanlator in ipairs(self.available_scanlators) do
     local is_selected = self.selected_scanlator == scanlator
     local text = is_selected and (Icons.FA_CHECK .. " " .. scanlator) or scanlator
-    
+
     table.insert(buttons, {
       {
         text = text,
         callback = function()
           UIManager:close(dialog)
           self.selected_scanlator = scanlator
-          
+
           Backend.setPreferredScanlator(self.manga.source.id, self.manga.id, scanlator)
-          
+
           self:updateItems()
           UIManager:show(InfoMessage:new { text = "Filtered to: " .. scanlator, timeout = 1 })
         end
@@ -508,7 +532,7 @@ function ChapterListing:onDownloadUnreadChapters()
     title = "Download unread chapters...",
     input_type = "number",
     input_hint = "Amount of unread chapters (default: all)",
-    description = self.selected_scanlator and 
+    description = self.selected_scanlator and
       ("Will download from: " .. self.selected_scanlator .. "\n\nSpecify amount or leave empty for all.") or
       "Specify the amount of unread chapters to download, or leave empty to download all of them.",
     buttons = {
