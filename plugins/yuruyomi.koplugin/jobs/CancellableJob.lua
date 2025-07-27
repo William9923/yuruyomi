@@ -18,12 +18,16 @@ end
 
 --- Creates a new cancellable download instance
 --- @param poll_interval number? Polling interval in seconds (default: 2)
+--- @param poll_timeout number? Individual poll timeout in seconds (default: 15)
+--- @param max_retries number? Maximum retry attempts (default: 3)
 --- @return CancellableJob job A new job instance
-function CancellableJob:new(poll_interval)
+function CancellableJob:new(poll_interval, poll_timeout, max_retries)
   local instance = {
     job_id = nil,
     is_cancelled = false,
-    poll_interval = poll_interval or 2, -- Poll every 2 seconds instead of continuous
+    poll_interval = poll_interval or 1,
+    poll_timeout = poll_timeout or 15,
+    max_retries = max_retries or 3,
   }
   setmetatable(instance, self)
   return instance
@@ -45,6 +49,11 @@ function CancellableJob:startDownload(source_id, manga_id, chapter_id, chapter_n
     return
   end
 
+  self.current_retries = 0
+  if onProgress then
+    onProgress("Starting download...")
+  end
+
   -- Create the download job
   local job_response = Backend.createDownloadChapterJob(source_id, manga_id, chapter_id, chapter_num)
 
@@ -57,8 +66,7 @@ function CancellableJob:startDownload(source_id, manga_id, chapter_id, chapter_n
   self.job_id = job_response.body
   self.is_cancelled = false
 
-  logger.info("Started download job:", self.job_id)
-  if onProgress then onProgress("Starting download...") end
+  logger.info("Started download job for:", self.job_id, self.source_id, manga_id, chapter_id, chapter_num)
 
   -- Start polling for job completion
   self:_pollJobStatus(onProgress, onComplete, onError, onCancel)
@@ -95,8 +103,24 @@ function CancellableJob:_pollJobStatus(onProgress, onComplete, onError, onCancel
   local status_response = Backend.getJobDetails(self.job_id)
 
   if status_response.type == 'ERROR' then
+    self.current_retries = self.current_retries + 1
     logger.err("Failed to get job status:", status_response.message)
-    if onError then onError(status_response.message) end
+    if self.current_retries <= self.max_retries then
+      logger.warn("Job status check failed, retrying", self.current_retries, "/", self.max_retries)
+      if onProgress then onProgress(_("Connection issue, retrying...")) end
+
+      -- SECURITY: Exponential backoff for retries - prevent overwhelming server
+      local retry_delay = math.min(self.poll_interval * (2 ^ self.current_retries), 30)
+      UIManager:scheduleIn(retry_delay, function()
+        self:_pollJobStatus(onProgress, onComplete, onError, onCancel)
+      end)
+      return
+    end
+
+    -- Max retries exceeded - SECURITY: Fail securely
+    local safe_error = _("Download failed after multiple attempts")
+    logger.err("Max retries exceeded for job", self.job_id and self.job_id:sub(1, 8) .. "..." or "unknown")
+    if onError then onError(safe_error) end
     self:_cleanup()
     return
   end
@@ -110,6 +134,7 @@ function CancellableJob:_pollJobStatus(onProgress, onComplete, onError, onCancel
     UIManager:scheduleIn(self.poll_interval, function()
       self:_pollJobStatus(onProgress, onComplete, onError, onCancel)
     end)
+
   elseif job_details.type == 'COMPLETED' then
     -- Download completed successfully
     logger.info("Download completed:", self.job_id)
@@ -128,6 +153,7 @@ end
 function CancellableJob:_cleanup()
   self.job_id = nil
   self.is_cancelled = false
+  self.current_retries = 0
 end
 
 --- Checks if download is active

@@ -10,6 +10,7 @@ local LoadingDialog = require("LoadingDialog")
 local util = require("util")
 
 local Backend = require("Backend")
+local CancellableJob = require("jobs/CancellableJob")
 local DownloadChapter = require("jobs/DownloadChapter")
 local DownloadUnreadChapters = require("jobs/DownloadUnreadChapters")
 local DownloadUnreadChaptersJobDialog = require("DownloadUnreadChaptersJobDialog")
@@ -334,6 +335,15 @@ end
 --- @param download_job DownloadChapter|nil
 function ChapterListing:openChapterOnReader(chapter, download_job)
   Trapper:wrap(function()
+    self:_openChapterOnReaderBlocking(chapter, download_job)
+  end)
+end
+
+
+--- @private
+--- @param chapter Chapter
+--- @param download_job DownloadChapter|nil
+function ChapterListing:_openChapterOnReaderBlocking(chapter, downloadJob)
     -- If the download job we have is already invalid (internet problems, for example),
     -- spawn a new job before proceeding.
     if download_job == nil or download_job:poll().type == 'ERROR' then
@@ -370,7 +380,6 @@ function ChapterListing:openChapterOnReader(chapter, download_job)
 
     self:_openReaderWithPath(self.chapters, chapter, manga_path)
 
-  end)
 end
 
 --- @private
