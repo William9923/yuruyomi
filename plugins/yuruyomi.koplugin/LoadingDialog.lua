@@ -1,6 +1,9 @@
 local InfoMessage = require("ui/widget/infomessage")
+local ButtonDialog = require("ui/widget/buttondialog")
 local UIManager = require("ui/uimanager")
 local Trapper = require("ui/trapper")
+local _ = require("gettext")
+
 
 local LoadingDialog = {}
 
@@ -14,16 +17,18 @@ local LoadingDialog = {}
 function LoadingDialog:showAndRun(message, runnable)
   assert(Trapper:isWrapped(), "expected to be called inside a function wrapped with `Trapper:wrap()`")
 
-  local message_dialog = InfoMessage:new {
-    text = message,
-    dismissable = false,
+ local message_dialog = InfoMessage:new {
+    text = _(message),
+    dismissable = true,
   }
 
   UIManager:show(message_dialog)
   UIManager:forceRePaint()
 
-  local completed, return_values = Trapper:dismissableRunInSubprocess(runnable, message_dialog)
-  assert(completed, "Expected runnable to run to completion")
+  local completed, return_values = Trapper:dismissableRunInSubprocess(runnable, dialog)
+  if not completed then
+    return nil
+  end
 
   UIManager:close(message_dialog)
 
