@@ -1,3 +1,4 @@
+local _ = require("gettext")
 local BD = require("ui/bidi")
 local ButtonDialog = require("ui/widget/buttondialog")
 local InfoMessage = require("ui/widget/infomessage")
@@ -424,27 +425,44 @@ function ChapterListing:openMenu()
 
   local buttons = {
     {
-      -- add to library
-      -- refresh chapters list
-      -- download unread 5, 10, 15
       {
-        text = Icons.FA_DOWNLOAD .. " Download unread chapters…",
+        text = Icons.FA_BOOK .. _(" Add to Library"),
+        callback = function(item)
+          UIManager:close(dialog)
+          self:addToLibrary()
+        end
+      },
+    },
+    {
+
+      {
+        text = Icons.FA_CHECK .. " " .. _("Refresh chapters"),
+        callback = function()
+          UIManager:close(dialog)
+          self:refreshChapters()
+        end
+      },
+    },
+    -- download unread 5
+    {
+      {
+        text = Icons.FA_DOWNLOAD .. _(" Download unread chapters…"),
         callback = function()
           UIManager:close(dialog)
 
           self:onDownloadUnreadChapters()
         end
       }
-      -- remove download
-      -- remove histories
-    }
+    },
+    -- remove download
+    -- remove histories
   }
 
   -- Add scanlator filter button if multiple scanlators exist
   if #self.available_scanlators > 1 then
     local scanlator_text = self.selected_scanlator and
-      (Icons.FA_FILTER .. " Group: " .. self.selected_scanlator) or
-      Icons.FA_FILTER .. " Filter by Group"
+        (Icons.FA_FILTER .. " Group: " .. self.selected_scanlator) or
+        Icons.FA_FILTER .. " Filter by Group"
 
     table.insert(buttons, {
       {
@@ -521,8 +539,8 @@ function ChapterListing:onDownloadUnreadChapters()
     input_type = "number",
     input_hint = "Amount of unread chapters (default: all)",
     description = self.selected_scanlator and
-      ("Will download from: " .. self.selected_scanlator .. "\n\nSpecify amount or leave empty for all.") or
-      "Specify the amount of unread chapters to download, or leave empty to download all of them.",
+        ("Will download from: " .. self.selected_scanlator .. "\n\nSpecify amount or leave empty for all.") or
+        "Specify the amount of unread chapters to download, or leave empty to download all of them.",
     buttons = {
       {
         {
@@ -713,6 +731,29 @@ function ChapterListing:onDownloadAllChapters()
     end
 
     UIManager:scheduleIn(1, updateProgress)
+  end)
+end
+
+--- @private
+function ChapterListing:addToLibrary()
+  Trapper:wrap(function()
+    local response = LoadingDialog:showAndRun(
+      _("Adding to library..."),
+      function()
+        return Backend.addMangaToLibrary(self.manga.source.id, self.manga.id)
+      end,
+      false
+    )
+
+    if response.type == 'ERROR' then
+      ErrorDialog:show(_("Failed to add to library: ") .. response.message)
+      return
+    end
+
+    UIManager:show(InfoMessage:new {
+      text = _("Added to library."),
+      timeout = 1,
+    })
   end)
 end
 
