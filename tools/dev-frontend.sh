@@ -2,6 +2,13 @@
 
 # Start only KOReader with the yuruyomi plugin
 # Usage: dev-frontend [--no-server-check]
+#
+# This script copies your source plugin directly to KOReader's plugins directory:
+#   ~/Library/Application Support/koreader/plugins/yuruyomi.koplugin
+#
+# Environment variables:
+#   YURUYOMI_USE_NIX_PLUGIN=1    Use Nix-built plugin (slower, but matches production)
+#   (default)                    Copy source files to KOReader plugins dir (faster development)
 
 set -e
 
@@ -67,4 +74,28 @@ export YURUYOMI_UDS_HTTP_REQUEST_COMMAND_OVERRIDE="$UDS_BINARY"
 export YURUYOMI_UDS_HTTP_REQUEST_WORKING_DIRECTORY="$WORKING_DIR"
 
 echo "Starting KOReader with yuruyomi plugin..."
-exec nix run .#koreader-with-plugin-dev -- "$HOME"
+# Default to using source files for development (can be overridden)
+if [[ "${YURUYOMI_USE_NIX_PLUGIN:-}" == "1" ]]; then
+    echo "Using Nix-built plugin (rebuilding)..."
+    nix build .#koreader-with-plugin-dev --rebuild
+    exec nix run .#koreader-with-plugin-dev -- "$HOME"
+else
+    echo "Using source files directly for faster development..."
+
+    # Copy source plugin to KOReader's standard plugins directory
+    KOREADER_PLUGINS_DIR="$HOME/Library/Application Support/koreader/plugins"
+    PLUGIN_NAME="yuruyomi.koplugin"
+
+    echo "Creating KOReader plugins directory if it doesn't exist..."
+    mkdir -p "$KOREADER_PLUGINS_DIR"
+
+    echo "Copying source plugin to: $KOREADER_PLUGINS_DIR/$PLUGIN_NAME"
+    # Remove existing plugin first to ensure clean copy
+    rm -rf "$KOREADER_PLUGINS_DIR/$PLUGIN_NAME"
+    cp -r "plugins/$PLUGIN_NAME" "$KOREADER_PLUGINS_DIR/"
+
+    echo "Plugin copied successfully. Changes will be reflected immediately."
+
+    # Use Nix KOReader (no need for --plugins flag now)
+    exec nix run .#koreader -- "$HOME"
+fi

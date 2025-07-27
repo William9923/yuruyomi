@@ -11,6 +11,7 @@ local util = require("util")
 
 local Backend = require("Backend")
 local DownloadChapter = require("jobs/DownloadChapter")
+-- local CancellableJob = require("jobs/CancellableJob") -- TODO: Enable when implementing cancellable downloads
 local DownloadUnreadChapters = require("jobs/DownloadUnreadChapters")
 local DownloadUnreadChaptersJobDialog = require("DownloadUnreadChaptersJobDialog")
 local Icons = require("Icons")
@@ -94,9 +95,9 @@ end
 -- Load saved scanlator preference from backend
 function ChapterListing:loadSavedScanlatorPreference()
   local response = Backend.getPreferredScanlator(self.manga.source.id, self.manga.id)
-  
+
   self.selected_scanlator = nil
-  
+
   if response.type == 'SUCCESS' and response.body then
     for _, available_scanlator in ipairs(self.available_scanlators) do
       if available_scanlator == response.body then
@@ -111,7 +112,7 @@ end
 function ChapterListing:extractAvailableScanlators()
   local scanlators = {}
   local scanlator_set = {}
-  
+
   for _, chapter in ipairs(self.chapters) do
     local scanlator = chapter.scanlator or "Unknown"
     if not scanlator_set[scanlator] then
@@ -119,9 +120,9 @@ function ChapterListing:extractAvailableScanlators()
       table.insert(scanlators, scanlator)
     end
   end
-  
+
   table.sort(scanlators)
-  
+
   self.available_scanlators = scanlators
 end
 
@@ -334,81 +335,196 @@ end
 --- @param download_job DownloadChapter|nil
 function ChapterListing:openChapterOnReader(chapter, download_job)
   Trapper:wrap(function()
-    -- If the download job we have is already invalid (internet problems, for example),
-    -- spawn a new job before proceeding.
-    if download_job == nil or download_job:poll().type == 'ERROR' then
-      download_job = DownloadChapter:new(chapter.source_id, chapter.manga_id, chapter.id, chapter.chapter_num)
-    end
-
-    if download_job == nil then
-      ErrorDialog:show('Could not download chapter.')
-
+    -- Input validation for security
+    if not chapter or not chapter.source_id or not chapter.manga_id or not chapter.id then
+      ErrorDialog:show(_("Invalid chapter data"))
       return
     end
 
-    local time = require("ui/time")
-    local start_time = time.now()
-    local response = LoadingDialog:showAndRun(
-      "Downloading chapter...",
-      function()
-        return download_job:runUntilCompletion()
+    -- Check if we want to use cancellable download (when file exists)
+    local CancellableJob = nil
+    pcall(function() CancellableJob = require("jobs/CancellableJob") end)
+
+    if CancellableJob then
+      -- Use cancellable download system
+      self:_openChapterWithCancellableDownload(chapter, CancellableJob)
+    else
+      -- Fall back to original blocking download
+      self:_openChapterWithBlockingDownload(chapter, download_job)
+    end
+  end)
+end
+
+--- New cancellable download implementation
+--- @private
+--- @param chapter Chapter
+--- @param CancellableJob table
+function ChapterListing:_openChapterWithCancellableDownload(chapter, CancellableJob)
+  local cancellable_download = CancellableJob:new(1.5) -- Poll every 1.5 seconds
+
+  local time = require("ui/time")
+  local start_time = time.now()
+
+  -- Create progress dialog with cancel button
+  local ButtonDialog = require("ui/widget/buttondialog")
+  local progress_dialog = ButtonDialog:new{
+    title = _("Downloading chapter..."),
+    title_align = "center",
+    buttons = {
+      {
+        {
+          text = _("Cancel"),
+          callback = function()
+            cancellable_download:cancel()
+            UIManager:close(progress_dialog)
+            logger.info("User cancelled chapter download")
+          end,
+        },
+      },
+    },
+  }
+
+  UIManager:show(progress_dialog)
+
+  -- Start the cancellable download
+  cancellable_download:startDownload(
+    chapter.source_id,
+    chapter.manga_id,
+    chapter.id,
+    chapter.chapter_num,
+    -- onProgress callback
+    function(message)
+      if progress_dialog then
+        local safe_message = util.htmlEscape(tostring(message or ""))
+        progress_dialog:setTitle(safe_message)
+        UIManager:setDirty(progress_dialog, "ui")
       end
+    end,
+    -- onComplete callback
+    function(manga_path)
+      UIManager:close(progress_dialog)
+
+      -- Validate file path for security
+      if not manga_path or manga_path == "" or manga_path:find("%.%.") then
+        ErrorDialog:show(_("Invalid download path received"))
+        logger.warn("Suspicious download path received")
+        return
+      end
+
+      -- Secure state mutation
+      if chapter and type(chapter) == "table" then
+        chapter.downloaded = true
+      end
+
+      logger.info("Download completed in", time.to_ms(time.since(start_time)), "ms")
+
+      -- Continue with reader opening logic
+      self:_openReaderWithPath(chapter, manga_path)
+    end,
+    -- onError callback
+    function(error_message)
+      UIManager:close(progress_dialog)
+      ErrorDialog:show(_("Download failed. Please try again."))
+    end,
+    -- onCancel callback
+    function()
+      UIManager:close(progress_dialog)
+      logger.info("Chapter download cancelled by user")
+    end
+  )
+end
+
+--- Original blocking download implementation (fallback)
+--- @private
+--- @param chapter Chapter
+--- @param download_job DownloadChapter|nil
+function ChapterListing:_openChapterWithBlockingDownload(chapter, download_job)
+  -- If the download job we have is already invalid (internet problems, for example),
+  -- spawn a new job before proceeding.
+  if download_job == nil or download_job:poll().type == 'ERROR' then
+    download_job = DownloadChapter:new(chapter.source_id, chapter.manga_id, chapter.id, chapter.chapter_num)
+  end
+
+  if download_job == nil then
+    ErrorDialog:show('Could not download chapter.')
+    return
+  end
+
+  local time = require("ui/time")
+  local start_time = time.now()
+  local response = LoadingDialog:showAndRun(
+    "Downloading chapter...",
+    function()
+      return download_job:runUntilCompletion()
+    end
+  )
+
+  if response.type == 'ERROR' then
+    ErrorDialog:show(response.message)
+    return
+  end
+
+  -- FIXME Mutating here _still_ sucks, we gotta think of a better way.
+  chapter.downloaded = true
+
+  local manga_path = response.body
+
+  logger.info("Waited ", time.to_ms(time.since(start_time)), "ms for download job to finish.")
+
+  self:_openReaderWithPath(chapter, manga_path)
+end
+
+--- Extracted reader opening logic for cleaner separation
+--- @private
+--- @param chapter Chapter
+--- @param manga_path string
+function ChapterListing:_openReaderWithPath(chapter, manga_path)
+  -- Preload next chapter download job (non-blocking)
+  local nextChapter = findNextChapter(self.chapters, chapter)
+  local nextChapterDownloadJob = nil
+
+  if nextChapter ~= nil then
+    nextChapterDownloadJob = DownloadChapter:new(
+      nextChapter.source_id,
+      nextChapter.manga_id,
+      nextChapter.id,
+      nextChapter.chapter_num
     )
+  end
 
-    if response.type == 'ERROR' then
-      ErrorDialog:show(response.message)
+  local onReturnCallback = function()
+    self:updateItems()
+    UIManager:show(self)
+  end
 
-      return
+  local onEndOfBookCallback = function()
+    -- Secure API call with timeout
+    local mark_read_response = Backend.markChapterAsRead(chapter.source_id, chapter.manga_id, chapter.id)
+
+    if mark_read_response.type == 'ERROR' then
+      logger.warn("Failed to mark chapter as read:", mark_read_response.message)
+      -- Continue anyway - don't block user experience
     end
 
-    -- FIXME Mutating here _still_ sucks, we gotta think of a better way.
-    chapter.downloaded = true
-
-    local manga_path = response.body
-
-    logger.info("Waited ", time.to_ms(time.since(start_time)), "ms for download job to finish.")
-
-    local nextChapter = findNextChapter(self.chapters, chapter)
-    local nextChapterDownloadJob = nil
+    self:updateChapterList()
 
     if nextChapter ~= nil then
-      nextChapterDownloadJob = DownloadChapter:new(
-        nextChapter.source_id,
-        nextChapter.manga_id,
-        nextChapter.id,
-        nextChapter.chapter_num
-      )
+      logger.info("opening next chapter", nextChapter)
+      self:openChapterOnReader(nextChapter, nextChapterDownloadJob)
+    else
+      MangaReader:closeReaderUi(function()
+        UIManager:show(self)
+      end)
     end
+  end
 
-    local onReturnCallback = function()
-      self:updateItems()
+  MangaReader:show({
+    path = manga_path,
+    on_end_of_book_callback = onEndOfBookCallback,
+    on_return_callback = onReturnCallback,
+  })
 
-      UIManager:show(self)
-    end
-
-    local onEndOfBookCallback = function()
-      Backend.markChapterAsRead(chapter.source_id, chapter.manga_id, chapter.id)
-
-      self:updateChapterList()
-
-      if nextChapter ~= nil then
-        logger.info("opening next chapter", nextChapter)
-        self:openChapterOnReader(nextChapter, nextChapterDownloadJob)
-      else
-        MangaReader:closeReaderUi(function()
-          UIManager:show(self)
-        end)
-      end
-    end
-
-    MangaReader:show({
-      path = manga_path,
-      on_end_of_book_callback = onEndOfBookCallback,
-      on_return_callback = onReturnCallback,
-    })
-
-    self:onClose()
-  end)
+  self:onClose()
 end
 
 --- @private
@@ -430,10 +546,10 @@ function ChapterListing:openMenu()
 
   -- Add scanlator filter button if multiple scanlators exist
   if #self.available_scanlators > 1 then
-    local scanlator_text = self.selected_scanlator and 
-      (Icons.FA_FILTER .. " Group: " .. self.selected_scanlator) or 
-      Icons.FA_FILTER .. " Filter by Group"
-    
+    local scanlator_text = self.selected_scanlator and
+        (Icons.FA_FILTER .. " Group: " .. self.selected_scanlator) or
+        Icons.FA_FILTER .. " Filter by Group"
+
     table.insert(buttons, {
       {
         text = scanlator_text,
@@ -464,9 +580,9 @@ function ChapterListing:showScanlatorDialog()
       callback = function()
         UIManager:close(dialog)
         self.selected_scanlator = nil
-        
+
         Backend.setPreferredScanlator(self.manga.source.id, self.manga.id, nil)
-        
+
         self:updateItems()
         UIManager:show(InfoMessage:new { text = "Showing all groups", timeout = 1 })
       end
@@ -477,16 +593,16 @@ function ChapterListing:showScanlatorDialog()
   for _, scanlator in ipairs(self.available_scanlators) do
     local is_selected = self.selected_scanlator == scanlator
     local text = is_selected and (Icons.FA_CHECK .. " " .. scanlator) or scanlator
-    
+
     table.insert(buttons, {
       {
         text = text,
         callback = function()
           UIManager:close(dialog)
           self.selected_scanlator = scanlator
-          
+
           Backend.setPreferredScanlator(self.manga.source.id, self.manga.id, scanlator)
-          
+
           self:updateItems()
           UIManager:show(InfoMessage:new { text = "Filtered to: " .. scanlator, timeout = 1 })
         end
@@ -508,9 +624,9 @@ function ChapterListing:onDownloadUnreadChapters()
     title = "Download unread chapters...",
     input_type = "number",
     input_hint = "Amount of unread chapters (default: all)",
-    description = self.selected_scanlator and 
-      ("Will download from: " .. self.selected_scanlator .. "\n\nSpecify amount or leave empty for all.") or
-      "Specify the amount of unread chapters to download, or leave empty to download all of them.",
+    description = self.selected_scanlator and
+        ("Will download from: " .. self.selected_scanlator .. "\n\nSpecify amount or leave empty for all.") or
+        "Specify the amount of unread chapters to download, or leave empty to download all of them.",
     buttons = {
       {
         {

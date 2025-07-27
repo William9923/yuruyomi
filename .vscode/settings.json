@@ -1,9 +1,30 @@
 {
-    "editor.formatOnSave": true,
+    "editor.formatOnSave": false,
+    "editor.codeActionsOnSave": {
+        "source.fixAll": "never",
+        "source.organizeImports": "never"
+    },
+    "[rust]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "rust-lang.rust-analyzer"
+    },
+    "[lua]": {
+        "editor.formatOnSave": false
+    },
+    "[json]": {
+        "editor.formatOnSave": true
+    },
     "rust-analyzer.linkedProjects": [
         "backend/Cargo.toml"
     ],
     "rust-analyzer.server.path": "rust-analyzer",
+    "rust-analyzer.check.command": "clippy",
+    "rust-analyzer.checkOnSave.enable": false,
+    "rust-analyzer.procMacro.enable": true,
+    "rust-analyzer.cargo.buildScripts.enable": true,
+    "rust-analyzer.cargo.loadOutDirsFromCheck": true,
+    "rust-analyzer.completion.limit": 25,
+    "rust-analyzer.diagnostics.experimental.enable": false,
     "lldb.launch.sourceLanguages": [
         "rust"
     ],
