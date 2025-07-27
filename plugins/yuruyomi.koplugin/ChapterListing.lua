@@ -424,6 +424,7 @@ function ChapterListing:openMenu()
   local dialog
 
   local buttons = {
+    -- TODO: Add resume buttons
     {
       {
         text = Icons.FA_BOOK .. _(" Add to Library"),
@@ -436,17 +437,36 @@ function ChapterListing:openMenu()
     {
 
       {
-        text = Icons.FA_CHECK .. " " .. _("Refresh chapters"),
+        text = Icons.FA_CHECK .. " " .. _("Refresh Chapters"),
         callback = function()
           UIManager:close(dialog)
           self:refreshChapters()
         end
       },
     },
-    -- download unread 5
     {
       {
-        text = Icons.FA_DOWNLOAD .. _(" Download unread chapters…"),
+        text = Icons.FA_DOWNLOAD .. _(" Download Next 5 chapters…"),
+        callback = function()
+          UIManager:close(dialog)
+
+          self:_initDownloadUnreadChaptersJob(5)
+        end
+      }
+    },
+    {
+      {
+        text = Icons.FA_DOWNLOAD .. _(" Download Next 10 chapters…"),
+        callback = function()
+          UIManager:close(dialog)
+
+          self:_initDownloadUnreadChaptersJob(10)
+        end
+      }
+    },
+    {
+      {
+        text = Icons.FA_DOWNLOAD .. _(" Download Unread Chapters…"),
         callback = function()
           UIManager:close(dialog)
 
@@ -567,24 +587,7 @@ function ChapterListing:onDownloadUnreadChapters()
               end
             end
 
-            -- Use scanlator-aware download
-            local job = self:createDownloadJob(amount)
-            if job then
-              local dialog = DownloadUnreadChaptersJobDialog:new({
-                show_parent = self,
-                job = job,
-                dismiss_callback = function()
-                  self:updateChapterList()
-                end
-              })
-
-              dialog:show()
-            else
-              UIManager:show(InfoMessage:new {
-                text = "No unread chapters found for " .. (self.selected_scanlator or "this manga"),
-                timeout = 2,
-              })
-            end
+            self:_initDownloadUnreadChaptersJob(amount)
           end,
         },
       }
@@ -592,6 +595,32 @@ function ChapterListing:onDownloadUnreadChapters()
   }
 
   UIManager:show(input_dialog)
+end
+
+--- @private
+--- @param amount number|nil If specified, the amount of unread chapters to download.
+function ChapterListing:_initDownloadUnreadChaptersJob(amount)
+  if amount == nil then
+    amount = 0 -- 0 means all unread chapters
+  end
+
+  local job = self:createDownloadJob(amount)
+  if job then
+    local dialog = DownloadUnreadChaptersJobDialog:new({
+      show_parent = self,
+      job = job,
+      dismiss_callback = function()
+        self:updateChapterList()
+      end
+    })
+
+    dialog:show()
+  else
+    UIManager:show(InfoMessage:new {
+      text = "No unread chapters found for " .. (self.selected_scanlator or "this manga"),
+      timeout = 2,
+    })
+  end
 end
 
 function ChapterListing:createDownloadJob(amount)
