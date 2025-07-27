@@ -15,6 +15,12 @@ return {
   FA_MAGNIFYING_GLASS  = "\u{F002}",
   FA_PLUG              = "\u{F1E6}",
   FA_FILTER            = "\u{f0b0}",
+  FA_REFRESH           = "\u{F021}",  -- Refresh/sync icon
+  FA_TRASH             = "\u{F1F8}",  -- Trash/delete icon
   WIFI_OFF             = "\u{ECA9}",
   UNICODE_ARROW_RIGHT  = "\u{25B8}",
+  FA_MINUS             = "\u{F068}",  -- Minus sign - subtle removal
+  FA_MINUS_CIRCLE      = "\u{F056}",  -- Minus in circle
+  FA_ERASER            = "\u{F12D}",  -- Eraser icon - good for "clear history"
+  FA_BAN               = "\u{F05E}",  -- Prohibition sign - for blocking/removing
 }

@@ -1,5 +1,5 @@
 use rust_decimal::Decimal;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::source::{
@@ -121,7 +121,7 @@ pub struct MangaState {
     pub preferred_scanlator: Option<String>,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub struct ChapterState {
     pub read: bool,
 }
@@ -170,6 +170,28 @@ impl From<SourceChapter> for ChapterInformation {
             // FIXME is this ever fallible?
             chapter_number: value.chapter_num.map(|num| num.try_into().unwrap()),
             volume_number: value.volume_num.map(|num| num.try_into().unwrap()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct OperationResult {
+    pub success: bool,
+    pub message: String,
+}
+
+impl OperationResult {
+    pub fn success(message: impl Into<String>) -> Self {
+        Self {
+            success: true,
+            message: message.into(),
+        }
+    }
+
+    pub fn failure(message: impl Into<String>) -> Self {
+        Self {
+            success: false,
+            message: message.into(),
         }
     }
 }

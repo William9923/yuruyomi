@@ -1,12 +1,12 @@
 use std::time::Duration;
 
 use axum::extract::{Path, Query, State as StateExtractor};
-use axum::routing::{get, post};
+use axum::routing::{delete, get, post};
 use axum::{Json, Router};
 use futures::Future;
 use log::warn;
 use serde::Deserialize;
-use shared::model::{ChapterId, MangaId};
+use shared::model::{ChapterId, MangaId, OperationResult};
 use shared::usecases;
 use tokio_util::sync::CancellationToken;
 
@@ -52,6 +52,10 @@ pub fn routes() -> Router<State> {
         .route(
             "/mangas/:source_id/:manga_id/preferred-scanlator",
             post(set_manga_preferred_scanlator),
+        )
+        .route(
+            "/mangas/:source_id/:manga_id/reading-history",
+            delete(clear_reading_history),
         )
 }
 
@@ -262,4 +266,18 @@ where
     request_cancellation_handle.abort();
 
     result
+}
+
+async fn clear_reading_history(
+    StateExtractor(State { database, .. }): StateExtractor<State>,
+    Path(params): Path<MangaChaptersPathParams>,
+) -> Result<Json<OperationResult>, AppError> {
+    let manga_id = MangaId::from(params);
+
+    match usecases::clear_manga_reading_history(&database, manga_id).await {
+        Ok(_) => Ok(Json(OperationResult::success(
+            "Manga Reading histories succesfully cleared",
+        ))),
+        Err(err) => Ok(Json(OperationResult::failure(err.to_string()))),
+    }
 }

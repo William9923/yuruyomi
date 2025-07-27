@@ -1,5 +1,6 @@
 pub mod add_manga_to_library;
 pub mod check_update;
+pub mod clear_manga_reading_history;
 pub mod fetch_manga_chapter;
 pub mod fetch_manga_chapters_in_batch;
 pub mod get_cached_manga_chapters;
@@ -22,6 +23,7 @@ pub mod update_settings;
 
 pub use add_manga_to_library::add_manga_to_library;
 pub use check_update::check_update;
+pub use clear_manga_reading_history::clear_manga_reading_history;
 pub use fetch_manga_chapter::fetch_manga_chapter;
 pub use fetch_manga_chapters_in_batch::fetch_manga_chapters_in_batch;
 pub use get_cached_manga_chapters::get_cached_manga_chapters;

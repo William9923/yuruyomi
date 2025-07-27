@@ -199,6 +199,7 @@ source = "git+https://github.com/tokio-rs/axum.git?branch=jplatte%2Fgeneric-serv
 dependencies = [
  "async-trait",
  "axum-core",
+ "axum-macros 0.4.2 (git+https://github.com/tokio-rs/axum.git?branch=jplatte%2Fgeneric-serve)",
  "bytes",
  "futures-util",
  "http 1.1.0",
@@ -250,6 +251,16 @@ name = "axum-macros"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57d123550fa8d071b7255cb0cc04dc302baa6c8c4a79f55701552684d8399bce"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.87",
+]
+
+[[package]]
+name = "axum-macros"
+version = "0.4.2"
+source = "git+https://github.com/tokio-rs/axum.git?branch=jplatte%2Fgeneric-serve#26a37a4679a3ec4ce88168be825d2f6940a1dec2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2957,7 +2968,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
- "axum-macros",
+ "axum-macros 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap",
  "env_logger",
  "futures",

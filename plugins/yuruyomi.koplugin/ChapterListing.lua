@@ -446,7 +446,7 @@ function ChapterListing:openMenu()
     },
     {
       {
-        text = Icons.FA_DOWNLOAD .. _(" Download Next 5 chapters…"),
+        text = Icons.FA_DOWNLOAD .. _(" Download Next 5 chapters"),
         callback = function()
           UIManager:close(dialog)
 
@@ -456,7 +456,7 @@ function ChapterListing:openMenu()
     },
     {
       {
-        text = Icons.FA_DOWNLOAD .. _(" Download Next 10 chapters…"),
+        text = Icons.FA_DOWNLOAD .. _(" Download Next 10 chapters"),
         callback = function()
           UIManager:close(dialog)
 
@@ -474,8 +474,24 @@ function ChapterListing:openMenu()
         end
       }
     },
-    -- remove download
-    -- remove histories
+    {
+      {
+        text = Icons.FA_TRASH .. _(" Delete Downloaded Chapters"),
+        callback = function()
+          UIManager:close(dialog)
+          -- TODO: implement delete downloaded chapters
+        end
+      }
+    },
+    {
+      {
+        text = Icons.FA_ERASER .. _(" Remove Read Histories"),
+        callback = function()
+          UIManager:close(dialog)
+          self:clearReadingHistory()
+        end
+      }
+    },
   }
 
   -- Add scanlator filter button if multiple scanlators exist
@@ -784,6 +800,48 @@ function ChapterListing:addToLibrary()
       timeout = 1,
     })
   end)
+end
+
+--- @private
+function ChapterListing:clearReadingHistory()
+  Trapper:wrap(function()
+    local source_id = self.manga.source.id
+    local manga_id = self.manga.id
+
+    local response = LoadingDialog:showAndRun(
+      _("Clearing reading history..."),
+      function()
+        return Backend.clearMangaReadingHistory(source_id, manga_id)
+      end,
+      false
+    )
+
+    if response.type == 'ERROR' then
+      ErrorDialog:show(_("Failed to clear reading history: ") .. response.message)
+      return
+    end
+
+    local result = response.body
+
+    if type(result) ~= "table" or type(result.success) ~= "boolean" then
+      logger.err("Invalid response structure from clearMangaReadingHistory")
+      ErrorDialog:show(_("Invalid server response"))
+      return
+    end
+
+    if result.success then
+      UIManager:show(InfoMessage:new {
+        text = _("Reading history cleared!"),
+        timeout = 2,
+      })
+      -- Refresh to show updated state
+      self:updateChapterList()
+    else
+      local error_msg = type(result.message) == "string" and result.message or "Unknown error"
+      ErrorDialog:show(_("Failed to clear reading history: ") .. error_msg)
+    end
+  end
+  )
 end
 
 return ChapterListing
