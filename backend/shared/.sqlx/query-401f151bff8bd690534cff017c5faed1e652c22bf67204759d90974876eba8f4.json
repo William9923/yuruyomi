@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n                SELECT source_id, manga_id, preferred_scanlator \n                FROM manga_state\n                WHERE source_id = ?1 AND manga_id = ?2;\n            ",
+  "query": "\n                SELECT source_id, manga_id, preferred_scanlator\n                FROM manga_state\n                WHERE source_id = ?1 AND manga_id = ?2;\n            ",
   "describe": {
     "columns": [
       {
@@ -28,5 +28,5 @@
       true
     ]
   },
-  "hash": "5f1d963ad98055a0442bfbbffa9dc63253e247a1a6870e25ab9e2abfbbf01f9b"
+  "hash": "401f151bff8bd690534cff017c5faed1e652c22bf67204759d90974876eba8f4"
 }
