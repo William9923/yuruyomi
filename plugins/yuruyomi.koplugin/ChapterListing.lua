@@ -83,25 +83,6 @@ function ChapterListing:updateChapterList()
   end
 
   local chapter_results = response.body
-  -- Log chapter results for debugging
-  logger.info("Found " .. #chapter_results .. " chapters for manga: " .. self.manga.title)
-
-  -- Print detailed information about each chapter
-  for i, chapter in ipairs(chapter_results) do
-    local chapter_info = string.format(
-      "[%d] Chapter %s (Vol: %s, Read: %s, Downloaded: %s)",
-      i,
-      chapter.chapter_num or "?",
-      chapter.volume_num or "?",
-      chapter.read and "Yes" or "No",
-      chapter.downloaded and "Yes" or "No"
-    )
-    logger.info(chapter_info)
-  end
-
-  -- Also log full dump for detailed debugging
-  logger.dbg("Full chapter results:", require("dump")(chapter_results))
-
   self.chapters = chapter_results
 
   self:extractAvailableScanlators()
