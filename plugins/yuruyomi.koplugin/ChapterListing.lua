@@ -450,7 +450,13 @@ function ChapterListing:openMenu()
         callback = function()
           UIManager:close(dialog)
 
-          self:_initDownloadUnreadChaptersJob(5)
+          local lastDownloadedChapter = self:getLastDownloadedChapter()
+          if lastDownloadedChapter == nil then
+            self:_initDownloadUnreadChaptersJob(math.min(5, #self.chapters))
+          else
+            local chapterIdx = self:getCurrentChapterIndexFromChapterNum(lastDownloadedChapter.chapter_num)
+            self:_initDownloadUnreadChaptersJob(math.min((#self.chapters - chapterIdx) + 5, #self.chapters)) -- len(chapters) - current chapter index bcs the list is reversed
+          end
         end
       }
     },
@@ -460,7 +466,13 @@ function ChapterListing:openMenu()
         callback = function()
           UIManager:close(dialog)
 
-          self:_initDownloadUnreadChaptersJob(10)
+          local lastDownloadedChapter = self:getLastDownloadedChapter()
+          if lastDownloadedChapter == nil then
+            self:_initDownloadUnreadChaptersJob(math.min(10, #self.chapters))
+          else
+            local chapterIdx = self:getCurrentChapterIndexFromChapterNum(lastDownloadedChapter.chapter_num)
+            self:_initDownloadUnreadChaptersJob(math.min((#self.chapters - chapterIdx) + 10, #self.chapters)) -- len(chapters) - current chapter index bcs the list is reversed
+          end
         end
       }
     },
@@ -638,6 +650,32 @@ function ChapterListing:_initDownloadUnreadChaptersJob(amount)
       timeout = 2,
     })
   end
+end
+
+--- @private
+function ChapterListing:getLastDownloadedChapter()
+  local last_downloaded_chapter = nil
+
+  for _, chapter in ipairs(self.chapters) do
+    if chapter.downloaded then
+      if last_downloaded_chapter == nil or chapter.chapter_num > last_downloaded_chapter.chapter_num then
+        last_downloaded_chapter = chapter
+      end
+    end
+  end
+
+  return last_downloaded_chapter
+end
+
+--- @private
+--- @param chapter_num number
+function ChapterListing:getCurrentChapterIndexFromChapterNum(chapter_num)
+  for i, chapter in ipairs(self.chapters) do
+    if chapter.chapter_num == chapter_num then
+      return i
+    end
+  end
+  return nil
 end
 
 function ChapterListing:createDownloadJob(amount)
