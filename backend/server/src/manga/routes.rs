@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use anyhow::Ok;
 use axum::extract::{Path, Query, State as StateExtractor};
 use axum::routing::{delete, get, post};
 use axum::{Json, Router};
@@ -14,6 +15,8 @@ use crate::model::{Chapter, Manga};
 use crate::source_extractor::SourceExtractor;
 use crate::state::State;
 use crate::AppError;
+
+const MAX_TIMEOUT_DURATIONS: Duration = Duration::from_secs(15);
 
 pub fn routes() -> Router<State> {
     Router::new()
@@ -40,6 +43,10 @@ pub fn routes() -> Router<State> {
         .route(
             "/mangas/:source_id/:manga_id/chapters/:chapter_id/download",
             post(download_manga_chapter),
+        )
+        .route(
+            "/mangas/:source_id/:manga_id/chapters/:chapter_id/download",
+            delete(remove_downloaded_chapter),
         )
         .route(
             "/mangas/:source_id/:manga_id/chapters/:chapter_id/mark-as-read",
@@ -89,7 +96,7 @@ async fn get_mangas(
     Query(GetMangasQuery { q }): Query<GetMangasQuery>,
 ) -> Result<Json<Vec<Manga>>, AppError> {
     let source_manager = &*source_manager.lock().await;
-    let results = cancel_after(Duration::from_secs(15), |token| {
+    let results = cancel_after(MAX_TIMEOUT_DURATIONS, |token| {
         usecases::search_mangas(source_manager, &database, token, q)
     })
     .await
@@ -280,4 +287,23 @@ async fn clear_reading_history(
         ))),
         Err(err) => Ok(Json(OperationResult::failure(err.to_string()))),
     }
+}
+
+async fn remove_downloaded_chapter(
+    StateExtractor(State {
+        chapter_storage, ..
+    }): StateExtractor<State>,
+    SourceExtractor(source): SourceExtractor,
+    Path(params): Path<DownloadMangaChapterParams>,
+    Query(DownloadMangaChapterQuery { chapter_num }): Query<DownloadMangaChapterQuery>,
+) -> Result<Json<()>, AppError> {
+    let chapter_id = ChapterId::from(params);
+    let chapter_storage = &*chapter_storage.lock().await;
+
+    chapter_storage
+        .delete_chapter(&chapter_id)
+        .await
+        .map_err(AppError::from)?;
+
+    Ok(Json(()))
 }

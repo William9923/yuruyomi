@@ -52,7 +52,7 @@ impl ChapterStorage {
     }
 
     // FIXME depending on `NamedTempFile` here is pretty ugly
-    pub fn persist_chapter(
+    pub async fn persist_chapter(
         &self,
         id: &ChapterId,
         temporary_file: NamedTempFile,
@@ -67,7 +67,7 @@ impl ChapterStorage {
                 self.storage_size_limit
             );
 
-            self.evict_least_recently_modified_chapter()
+            self.evict_least_recently_modified_chapter().await
                 .with_context(|| format!(
                     "while attempting to bring the storage size under the {} limit (current size: {}, persisted chapter size: {})",
                     self.storage_size_limit,
@@ -103,7 +103,23 @@ impl ChapterStorage {
         Size::from_bytes(size_in_bytes)
     }
 
-    fn evict_least_recently_modified_chapter(&self) -> Result<()> {
+    async fn delete_file_safely(&self, path: PathBuf) -> Result<()> {
+
+        let cloned_path = path.clone();
+
+        match tokio::fs::remove_file(path).await {
+            Ok(_) => Ok(()),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()), // Already deleted
+            Err(e) => Err(anyhow!("Failed to delete file {}: {}", cloned_path.display(), e)),
+        }
+    }
+
+    pub async fn delete_chapter(&self, id: &ChapterId) -> Result<()> {
+        let chapter_to_delete = self.path_for_chapter(id);
+        self.delete_file_safely(chapter_to_delete).await
+    }
+
+    async fn evict_least_recently_modified_chapter(&self) -> Result<()> {
         let chapter_to_evict = self
             .find_least_recently_modified_chapter()?
             .ok_or_else(|| anyhow!("couldn't find any chapters to evict from storage"))?;
@@ -113,9 +129,7 @@ impl ChapterStorage {
             chapter_to_evict.display()
         );
 
-        fs::remove_file(chapter_to_evict)?;
-
-        Ok(())
+        self.delete_file_safely(chapter_to_evict).await
     }
 
     fn find_least_recently_modified_chapter(&self) -> Result<Option<PathBuf>> {
