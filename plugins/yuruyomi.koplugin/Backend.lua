@@ -281,6 +281,30 @@ function Backend.markChapterAsRead(source_id, manga_id, chapter_id)
   })
 end
 
+--- Deletes a single downloaded chapter.
+--- @param source_id string
+--- @param manga_id string
+--- @param chapter_id string
+--- @return SuccessfulResponse<OperationResult>|ErrorResponse
+function Backend.deleteChapterDownload(source_id, manga_id, chapter_id)
+  return Backend.requestJson({
+    path = "/mangas/" ..
+        source_id .. "/" .. util.urlEncode(manga_id) .. "/chapters/" .. util.urlEncode(chapter_id) .. "/download",
+    method = "DELETE",
+  })
+end
+
+--- Deletes all downloaded chapters for a manga.
+--- @param source_id string
+--- @param manga_id string
+--- @return SuccessfulResponse<OperationResult>|ErrorResponse
+function Backend.deleteAllMangaDownloads(source_id, manga_id)
+  return Backend.requestJson({
+    path = "/mangas/" .. source_id .. "/" .. util.urlEncode(manga_id) .. "/downloads",
+    method = "DELETE",
+  })
+end
+
 --- Lists information about the installed sources.
 --- @return SuccessfulResponse<SourceInformation[]>|ErrorResponse
 function Backend.listInstalledSources()
