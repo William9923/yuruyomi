@@ -11,6 +11,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: Prod 
     strategy:
       matrix:
         target: ["aarch64", "desktop", "kindle", "kindlehf"]
