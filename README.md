@@ -26,14 +26,20 @@ How does the UI experience I would like ?
   6. Dismissable immediate read -> DONE
   4. Delete download -> DONE
   5. Quick Resume (for reading) -> DONE
-  --- next release -> 0.1
+
+
+  --- next release -> 1.1.0
+
   6. Custom Download location per source/manga/<chapter-num> folder
   7. Action Button per item in chapter listing
     Action Button: Download button (for now)
-  --- next release -> 0.2
+
+  --- next release -> 1.2.0
+
   8. Proper progress bar dialog + download manager -> download single & download many
   9. Show Download Queue Manager per chapter, max showing 5 (or via settings) (linear 1 at a time on background), dialog
-  --- next release -> 0.3
+
+  --- next release -> 1.3.0
 
 2. List of manga in libraries + manga finder:
 - current: ListView
@@ -45,6 +51,8 @@ How does the UI experience I would like ?
     - Source
     - Total chapter
   (Plugin reference: coverbrowser)
+
+  --- next release -> 1.4.0
 
 
 3. Detailed view of a manga -> after search result
@@ -58,11 +66,11 @@ How does the UI experience I would like ?
  5. writer
  6. Show chapter list
 
+  --- next release -> 1.5.0
 
 4. Search & Manga Discovery: => how does mihon had different search??
 - current: search only by text
 - proposed:
   - sort by popularity or any other kind of  (dropdown options)
 
-- long term proposed (v2):
-  - customized search per source (like mihon)
+  --- next release -> 1.6.0
