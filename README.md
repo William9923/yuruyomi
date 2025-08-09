@@ -24,23 +24,16 @@ How does the UI experience I would like ?
   2. Refresh chapters list -> DONE
   3. Delete reading history -> DONE
   6. Dismissable immediate read -> DONE
-  4. Delete download -> IN PROGRESS
-    Flow:
-    1. Backend Implementation
-     - I think it make sense to have both delete all in manga, and delete per chapter
-     - Once we had abilities to download per chapter, we should also expose capabilities to delete per chapter i believe
-     - Backend done
-    2. Frontend Implementation Flow
-     - Implement 2 types
-     - Per chapter deletion (api exposed)
-     - All chapter in manga (you can traverse and apply 1 by 1, interruptable bcs it might take time) -> if possible show progress, should be easy ? Good progress bar training
+  4. Delete download -> DONE
+  5. Quick Resume (for reading) -> DONE
   --- next release -> 0.1
-  5. Custom per source folder
-  7. Proper progress bar dialog -> download single & download many
+  6. Custom Download location per source/manga/<chapter-num> folder
+  7. Action Button per item in chapter listing
+    Action Button: Download button (for now)
   --- next release -> 0.2
-  3. Download on demand (like mihon), via button -> IN PROGRESS
-  4. Show Download Queue Manager per chapter, max showing 5 (or via settings) (linear 1 at a time on background), dialog
-
+  8. Proper progress bar dialog + download manager -> download single & download many
+  9. Show Download Queue Manager per chapter, max showing 5 (or via settings) (linear 1 at a time on background), dialog
+  --- next release -> 0.3
 
 2. List of manga in libraries + manga finder:
 - current: ListView
