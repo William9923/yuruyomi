@@ -64,7 +64,7 @@ if command -v koreader > /dev/null 2>&1; then
 
     # Create temp plugin directory
     TEMP_PLUGIN_DIR=$(mktemp -d)
-    cp -r frontend/yuruyomi.koplugin "$TEMP_PLUGIN_DIR/"
+    cp -r plugins/yuruyomi.koplugin "$TEMP_PLUGIN_DIR/"
 
     echo "Starting KOReader with temporary plugin directory: $TEMP_PLUGIN_DIR"
     exec koreader --plugins="$TEMP_PLUGIN_DIR" "$HOME"

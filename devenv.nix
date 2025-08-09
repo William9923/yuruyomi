@@ -82,7 +82,7 @@ in {
     '';
 
     ".luarc.json".text = luarcConfig;
-    "frontend/.luarc.json".text = luarcConfig;
+    "plugins/.luarc.json".text = luarcConfig;
   };
 
   # https://devenv.sh/languages/

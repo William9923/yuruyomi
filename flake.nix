@@ -87,8 +87,8 @@
             name = "yuruyomi-plugin-without-server";
             # Filter out unittests (*_spec.lua) files.
             src = lib.fileset.toSource {
-              root = ./frontend;
-              fileset = (lib.fileset.fileFilter (file: !(lib.strings.hasSuffix "_spec.lua" file.name)) ./frontend);
+              root = ./plugins;
+              fileset = (lib.fileset.fileFilter (file: !(lib.strings.hasSuffix "_spec.lua" file.name)) ./plugins);
             };
             phases = [ "unpackPhase" "installPhase" ];
             installPhase = ''
