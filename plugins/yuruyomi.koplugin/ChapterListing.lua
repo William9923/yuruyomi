@@ -1,3 +1,4 @@
+local _ = require("gettext")
 local BD = require("ui/bidi")
 local ButtonDialog = require("ui/widget/buttondialog")
 local InfoMessage = require("ui/widget/infomessage")
@@ -423,28 +424,94 @@ function ChapterListing:openMenu()
   local dialog
 
   local buttons = {
+    -- TODO: Add resume buttons
     {
-      -- add to library
-      -- refresh chapters list
-      -- download unread 5, 10, 15
       {
-        text = Icons.FA_DOWNLOAD .. " Download unread chapters…",
+        text = Icons.FA_BOOK .. _(" Add to Library"),
+        callback = function(item)
+          UIManager:close(dialog)
+          self:addToLibrary()
+        end
+      },
+    },
+    {
+
+      {
+        text = Icons.FA_CHECK .. " " .. _("Refresh Chapters"),
+        callback = function()
+          UIManager:close(dialog)
+          self:refreshChapters()
+        end
+      },
+    },
+    {
+      {
+        text = Icons.FA_DOWNLOAD .. _(" Download Next 5 chapters"),
+        callback = function()
+          UIManager:close(dialog)
+
+          local lastDownloadedChapter = self:getLastDownloadedChapter()
+          if lastDownloadedChapter == nil then
+            self:_initDownloadUnreadChaptersJob(math.min(5, #self.chapters))
+          else
+            local chapterIdx = self:getCurrentChapterIndexFromChapterNum(lastDownloadedChapter.chapter_num)
+            self:_initDownloadUnreadChaptersJob(math.min((#self.chapters - chapterIdx) + 5, #self.chapters)) -- len(chapters) - current chapter index bcs the list is reversed
+          end
+        end
+      }
+    },
+    {
+      {
+        text = Icons.FA_DOWNLOAD .. _(" Download Next 10 chapters"),
+        callback = function()
+          UIManager:close(dialog)
+
+          local lastDownloadedChapter = self:getLastDownloadedChapter()
+          if lastDownloadedChapter == nil then
+            self:_initDownloadUnreadChaptersJob(math.min(10, #self.chapters))
+          else
+            local chapterIdx = self:getCurrentChapterIndexFromChapterNum(lastDownloadedChapter.chapter_num)
+            self:_initDownloadUnreadChaptersJob(math.min((#self.chapters - chapterIdx) + 10, #self.chapters)) -- len(chapters) - current chapter index bcs the list is reversed
+          end
+        end
+      }
+    },
+    {
+      {
+        text = Icons.FA_DOWNLOAD .. _(" Download Unread Chapters…"),
         callback = function()
           UIManager:close(dialog)
 
           self:onDownloadUnreadChapters()
         end
       }
-      -- remove download
-      -- remove histories
-    }
+    },
+    {
+      {
+        text = Icons.FA_TRASH .. _(" Delete Downloaded Chapters"),
+        callback = function()
+          UIManager:close(dialog)
+          self:deleteAllDownloadedChapters()
+        end
+      }
+    },
+    {
+      {
+        text = Icons.FA_ERASER .. _(" Remove Read Histories"),
+        callback = function()
+          UIManager:close(dialog)
+          self:clearReadingHistory()
+          self:updateChapterList()
+        end
+      }
+    },
   }
 
   -- Add scanlator filter button if multiple scanlators exist
   if #self.available_scanlators > 1 then
     local scanlator_text = self.selected_scanlator and
-      (Icons.FA_FILTER .. " Group: " .. self.selected_scanlator) or
-      Icons.FA_FILTER .. " Filter by Group"
+        (Icons.FA_FILTER .. " Group: " .. self.selected_scanlator) or
+        Icons.FA_FILTER .. " Filter by Group"
 
     table.insert(buttons, {
       {
@@ -521,8 +588,8 @@ function ChapterListing:onDownloadUnreadChapters()
     input_type = "number",
     input_hint = "Amount of unread chapters (default: all)",
     description = self.selected_scanlator and
-      ("Will download from: " .. self.selected_scanlator .. "\n\nSpecify amount or leave empty for all.") or
-      "Specify the amount of unread chapters to download, or leave empty to download all of them.",
+        ("Will download from: " .. self.selected_scanlator .. "\n\nSpecify amount or leave empty for all.") or
+        "Specify the amount of unread chapters to download, or leave empty to download all of them.",
     buttons = {
       {
         {
@@ -549,24 +616,7 @@ function ChapterListing:onDownloadUnreadChapters()
               end
             end
 
-            -- Use scanlator-aware download
-            local job = self:createDownloadJob(amount)
-            if job then
-              local dialog = DownloadUnreadChaptersJobDialog:new({
-                show_parent = self,
-                job = job,
-                dismiss_callback = function()
-                  self:updateChapterList()
-                end
-              })
-
-              dialog:show()
-            else
-              UIManager:show(InfoMessage:new {
-                text = "No unread chapters found for " .. (self.selected_scanlator or "this manga"),
-                timeout = 2,
-              })
-            end
+            self:_initDownloadUnreadChaptersJob(amount)
           end,
         },
       }
@@ -574,6 +624,58 @@ function ChapterListing:onDownloadUnreadChapters()
   }
 
   UIManager:show(input_dialog)
+end
+
+--- @private
+--- @param amount number|nil If specified, the amount of unread chapters to download.
+function ChapterListing:_initDownloadUnreadChaptersJob(amount)
+  if amount == nil then
+    amount = 0 -- 0 means all unread chapters
+  end
+
+  local job = self:createDownloadJob(amount)
+  if job then
+    local dialog = DownloadUnreadChaptersJobDialog:new({
+      show_parent = self,
+      job = job,
+      dismiss_callback = function()
+        self:updateChapterList()
+      end
+    })
+
+    dialog:show()
+  else
+    UIManager:show(InfoMessage:new {
+      text = "No unread chapters found for " .. (self.selected_scanlator or "this manga"),
+      timeout = 2,
+    })
+  end
+end
+
+--- @private
+function ChapterListing:getLastDownloadedChapter()
+  local last_downloaded_chapter = nil
+
+  for _, chapter in ipairs(self.chapters) do
+    if chapter.downloaded then
+      if last_downloaded_chapter == nil or chapter.chapter_num > last_downloaded_chapter.chapter_num then
+        last_downloaded_chapter = chapter
+      end
+    end
+  end
+
+  return last_downloaded_chapter
+end
+
+--- @private
+--- @param chapter_num number
+function ChapterListing:getCurrentChapterIndexFromChapterNum(chapter_num)
+  for i, chapter in ipairs(self.chapters) do
+    if chapter.chapter_num == chapter_num then
+      return i
+    end
+  end
+  return nil
 end
 
 function ChapterListing:createDownloadJob(amount)
@@ -713,6 +815,243 @@ function ChapterListing:onDownloadAllChapters()
     end
 
     UIManager:scheduleIn(1, updateProgress)
+  end)
+end
+
+--- @private
+function ChapterListing:addToLibrary()
+  Trapper:wrap(function()
+    local response = LoadingDialog:showAndRun(
+      _("Adding to library..."),
+      function()
+        return Backend.addMangaToLibrary(self.manga.source.id, self.manga.id)
+      end,
+      false
+    )
+
+    if response.type == 'ERROR' then
+      ErrorDialog:show(_("Failed to add to library: ") .. response.message)
+      return
+    end
+
+    UIManager:show(InfoMessage:new {
+      text = _("Added to library."),
+      timeout = 1,
+    })
+  end)
+end
+
+--- @private
+function ChapterListing:clearReadingHistory()
+  Trapper:wrap(function()
+    local source_id = self.manga.source.id
+    local manga_id = self.manga.id
+
+    local response = LoadingDialog:showAndRun(
+      _("Clearing reading history..."),
+      function()
+        return Backend.clearMangaReadingHistory(source_id, manga_id)
+      end,
+      false
+    )
+
+    if response.type == 'ERROR' then
+      ErrorDialog:show(_("Failed to clear reading history: ") .. response.message)
+      return
+    end
+
+    local result = response.body
+
+    if type(result) ~= "table" or type(result.success) ~= "boolean" then
+      logger.err("Invalid response structure from clearMangaReadingHistory")
+      ErrorDialog:show(_("Invalid server response"))
+      return
+    end
+
+    if result.success then
+      UIManager:show(InfoMessage:new {
+        text = _("Reading history cleared!"),
+        timeout = 2,
+      })
+      -- Refresh to show updated state
+      self:updateChapterList()
+    else
+      local error_msg = type(result.message) == "string" and result.message or "Unknown error"
+      ErrorDialog:show(_("Failed to clear reading history: ") .. error_msg)
+    end
+  end
+  )
+end
+
+--- @private
+function ChapterListing:deleteAllDownloadedChapters()
+  local ConfirmBox = require("ui/widget/confirmbox")
+  
+  UIManager:show(ConfirmBox:new {
+    text = _("Delete all downloaded chapters for this manga?"),
+    ok_text = _("Delete"),
+    ok_callback = function()
+      self:performDeleteAllDownloads()
+    end,
+  })
+end
+
+--- @private
+function ChapterListing:performDeleteAllDownloads()
+  Trapper:wrap(function()
+    local response = LoadingDialog:showAndRun(
+      _("Deleting downloaded chapters..."),
+      function()
+        return Backend.deleteAllMangaDownloads(self.manga.source.id, self.manga.id)
+      end,
+      false
+    )
+
+    if response.type == 'ERROR' then
+      ErrorDialog:show(_("Failed to delete downloads: ") .. response.message)
+      return
+    end
+
+    local result = response.body
+    
+    if type(result) ~= "table" or type(result.success) ~= "boolean" then
+      logger.err("Invalid response structure from deleteAllMangaDownloads")
+      ErrorDialog:show(_("Invalid server response"))
+      return
+    end
+
+    if result.success then
+      UIManager:show(InfoMessage:new {
+        text = result.message or _("Downloads deleted successfully!"),
+        timeout = 2,
+      })
+      -- Refresh to show updated state
+      self:updateChapterList()
+    else
+      local error_msg = type(result.message) == "string" and result.message or "Unknown error"
+      ErrorDialog:show(_("Failed to delete downloads: ") .. error_msg)
+    end
+  end)
+end
+
+--- @private  
+function ChapterListing:onContextMenuChoice(entry, pos)
+  local chapter = entry.chapter
+  
+  if not chapter then
+    return
+  end
+
+  local ButtonDialog = require("ui/widget/buttondialog")
+  local buttons = {}
+  
+  -- Only show delete option if chapter is downloaded
+  if chapter.downloaded then
+    table.insert(buttons, { {
+      text = Icons.FA_TRASH .. _(" Delete Download"),
+      callback = function()
+        UIManager:closeAll()
+        self:deleteChapterDownload(chapter)
+      end,
+    } })
+  end
+  
+  -- Always show mark as read option
+  table.insert(buttons, { {
+    text = chapter.read and (Icons.FA_EYE_SLASH .. _(" Mark as Unread")) or (Icons.FA_EYE .. _(" Mark as Read")),
+    callback = function()
+      UIManager:closeAll()
+      self:toggleChapterReadStatus(chapter)
+    end,
+  } })
+
+  if #buttons > 0 then
+    UIManager:show(ButtonDialog:new {
+      title = chapter.title or (_("Chapter ") .. tostring(chapter.chapter_num or "")),
+      title_align = "center",
+      buttons = buttons,
+    })
+  end
+end
+
+--- @private
+function ChapterListing:deleteChapterDownload(chapter)
+  local ConfirmBox = require("ui/widget/confirmbox")
+  
+  local chapter_title = chapter.title or (_("Chapter ") .. tostring(chapter.chapter_num or chapter.id))
+  
+  UIManager:show(ConfirmBox:new {
+    text = _("Delete download for: ") .. chapter_title .. "?",
+    ok_text = _("Delete"),
+    ok_callback = function()
+      self:performDeleteChapterDownload(chapter)
+    end,
+  })
+end
+
+--- @private
+function ChapterListing:performDeleteChapterDownload(chapter)
+  Trapper:wrap(function()
+    local response = LoadingDialog:showAndRun(
+      _("Deleting chapter download..."),
+      function()
+        return Backend.deleteChapterDownload(chapter.source_id, chapter.manga_id, chapter.id)
+      end,
+      false
+    )
+
+    if response.type == 'ERROR' then
+      ErrorDialog:show(_("Failed to delete download: ") .. response.message)
+      return
+    end
+
+    local result = response.body
+    
+    if type(result) ~= "table" or type(result.success) ~= "boolean" then
+      logger.err("Invalid response structure from deleteChapterDownload")
+      ErrorDialog:show(_("Invalid server response"))
+      return
+    end
+
+    if result.success then
+      UIManager:show(InfoMessage:new {
+        text = result.message or _("Chapter download deleted successfully!"),
+        timeout = 2,
+      })
+      -- Refresh to show updated state
+      self:updateChapterList()
+    else
+      local error_msg = type(result.message) == "string" and result.message or "Unknown error"
+      ErrorDialog:show(_("Failed to delete download: ") .. error_msg)
+    end
+  end)
+end
+
+--- @private
+function ChapterListing:toggleChapterReadStatus(chapter)
+  -- Implementation for toggling read status - this might already exist
+  -- For now, just mark as read since that's what we have in the backend
+  Trapper:wrap(function()
+    local response = LoadingDialog:showAndRun(
+      _("Updating chapter status..."),
+      function()
+        return Backend.markChapterAsRead(chapter.source_id, chapter.manga_id, chapter.id)
+      end,
+      false
+    )
+
+    if response.type == 'ERROR' then
+      ErrorDialog:show(_("Failed to update chapter status: ") .. response.message)
+      return
+    end
+
+    UIManager:show(InfoMessage:new {
+      text = _("Chapter marked as read!"),
+      timeout = 2,
+    })
+    
+    -- Refresh to show updated state
+    self:updateChapterList()
   end)
 end
 
