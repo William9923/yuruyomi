@@ -104,13 +104,16 @@ impl ChapterStorage {
     }
 
     async fn delete_file_safely(&self, path: PathBuf) -> Result<()> {
-
         let cloned_path = path.clone();
 
         match tokio::fs::remove_file(path).await {
             Ok(_) => Ok(()),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()), // Already deleted
-            Err(e) => Err(anyhow!("Failed to delete file {}: {}", cloned_path.display(), e)),
+            Err(e) => Err(anyhow!(
+                "Failed to delete file {}: {}",
+                cloned_path.display(),
+                e
+            )),
         }
     }
 

@@ -105,7 +105,7 @@ in {
     check-format.exec = "cd $DEVENV_ROOT/backend && cargo fmt --check";
     check-lint.exec = ''
       cd $DEVENV_ROOT/backend && cargo clippy -- -D warnings
-      cd $DEVENV_ROOT && python3 ci/lua-language-server-check.py frontend/
+      cd $DEVENV_ROOT && python3 ci/lua-language-server-check.py plugins/
     '';
     fix-rust-format.exec = "cd $DEVENV_ROOT/backend && cargo fmt --all";
     fix-rust-lint.exec = "cd $DEVENV_ROOT/backend && cargo clippy --fix --allow-dirty -- -D warnings";

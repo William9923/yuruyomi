@@ -289,7 +289,9 @@ async fn clear_reading_history(
         std::result::Result::Ok(_) => std::result::Result::Ok(Json(OperationResult::success(
             "Manga Reading histories successfully cleared",
         ))),
-        std::result::Result::Err(err) => std::result::Result::Ok(Json(OperationResult::failure(err.to_string()))),
+        std::result::Result::Err(err) => {
+            std::result::Result::Ok(Json(OperationResult::failure(err.to_string())))
+        }
     }
 }
 
@@ -302,15 +304,21 @@ async fn delete_chapter_download(
     let chapter_id = ChapterId::from(params);
     let chapter_storage = &*chapter_storage.lock().await;
 
-    match usecases::delete_chapter_download(&chapter_storage, chapter_id).await {
+    match usecases::delete_chapter_download(chapter_storage, chapter_id).await {
         std::result::Result::Ok(was_deleted) => {
             if was_deleted {
-                std::result::Result::Ok(Json(OperationResult::success("Chapter download deleted successfully")))
+                std::result::Result::Ok(Json(OperationResult::success(
+                    "Chapter download deleted successfully",
+                )))
             } else {
-                std::result::Result::Ok(Json(OperationResult::success("Chapter was not downloaded")))
+                std::result::Result::Ok(Json(OperationResult::success(
+                    "Chapter was not downloaded",
+                )))
             }
         }
-        std::result::Result::Err(err) => std::result::Result::Ok(Json(OperationResult::failure(err.to_string()))),
+        std::result::Result::Err(err) => {
+            std::result::Result::Ok(Json(OperationResult::failure(err.to_string())))
+        }
     }
 }
 
@@ -325,11 +333,13 @@ async fn delete_manga_downloads(
     let manga_id = MangaId::from(params);
     let chapter_storage = &*chapter_storage.lock().await;
 
-    match usecases::delete_manga_downloads(&database, &chapter_storage, manga_id).await {
+    match usecases::delete_manga_downloads(&database, chapter_storage, manga_id).await {
         std::result::Result::Ok(deleted_count) => {
             let message = format!("Successfully deleted {} chapter downloads", deleted_count);
             std::result::Result::Ok(Json(OperationResult::success(&message)))
         }
-        std::result::Result::Err(err) => std::result::Result::Ok(Json(OperationResult::failure(err.to_string()))),
+        std::result::Result::Err(err) => {
+            std::result::Result::Ok(Json(OperationResult::failure(err.to_string())))
+        }
     }
 }

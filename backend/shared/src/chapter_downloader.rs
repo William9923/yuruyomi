@@ -64,7 +64,8 @@ pub async fn ensure_chapter_is_in_storage(
     // If we succeeded downloading all the chapter pages, persist our temporary
     // file into the chapter storage definitively.
     chapter_storage
-        .persist_chapter(chapter_id, temporary_file).await
+        .persist_chapter(chapter_id, temporary_file)
+        .await
         .with_context(|| {
             format!(
                 "Failed to persist chapter {} into storage",
