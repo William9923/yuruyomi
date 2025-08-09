@@ -424,7 +424,17 @@ function ChapterListing:openMenu()
   local dialog
 
   local buttons = {
-    -- TODO: Add resume buttons
+    -- Quick Resume
+    {
+      {
+        text = Icons.UNICODE_ARROW_RIGHT .. _(" Quick Resume"),
+        callback = function()
+          UIManager:close(dialog)
+          self:quickResume()
+        end
+      },
+    },
+    -- Library & Data Management
     {
       {
         text = Icons.FA_BOOK .. _(" Add to Library"),
@@ -433,9 +443,6 @@ function ChapterListing:openMenu()
           self:addToLibrary()
         end
       },
-    },
-    {
-
       {
         text = Icons.FA_CHECK .. " " .. _("Refresh Chapters"),
         callback = function()
@@ -444,9 +451,11 @@ function ChapterListing:openMenu()
         end
       },
     },
+    -- Download Options
+    {}, -- spacer
     {
       {
-        text = Icons.FA_DOWNLOAD .. _(" Download Next 5 chapters"),
+        text = Icons.FA_DOWNLOAD .. _(" Next 5 chapters"),
         callback = function()
           UIManager:close(dialog)
 
@@ -458,11 +467,9 @@ function ChapterListing:openMenu()
             self:_initDownloadUnreadChaptersJob(math.min((#self.chapters - chapterIdx) + 5, #self.chapters)) -- len(chapters) - current chapter index bcs the list is reversed
           end
         end
-      }
-    },
-    {
+      },
       {
-        text = Icons.FA_DOWNLOAD .. _(" Download Next 10 chapters"),
+        text = Icons.FA_DOWNLOAD .. _(" Next 10 chapters"),
         callback = function()
           UIManager:close(dialog)
 
@@ -478,23 +485,23 @@ function ChapterListing:openMenu()
     },
     {
       {
-        text = Icons.FA_DOWNLOAD .. _(" Download Unread Chapters…"),
+        text = Icons.FA_DOWNLOAD .. _(" Unread Chapters…"),
         callback = function()
           UIManager:close(dialog)
 
           self:onDownloadUnreadChapters()
         end
-      }
-    },
-    {
+      },
       {
-        text = Icons.FA_TRASH .. _(" Delete Downloaded Chapters"),
+        text = Icons.FA_TRASH .. _(" Delete Chapters"),
         callback = function()
           UIManager:close(dialog)
           self:deleteAllDownloadedChapters()
         end
-      }
+      },
     },
+    {}, -- spacer
+    -- Cleanup Options
     {
       {
         text = Icons.FA_ERASER .. _(" Remove Read Histories"),
@@ -668,6 +675,52 @@ function ChapterListing:getLastDownloadedChapter()
 end
 
 --- @private
+--- Finds the next chapter to read (last read chapter + 1)
+--- @return Chapter|nil The next chapter to read, or nil if none found
+function ChapterListing:getNextChapterToRead()
+  local last_read_chapter = nil
+  local last_read_chapter_num = nil
+
+  -- Find the last read chapter (highest chapter number that's been read)
+  for _, chapter in ipairs(self.chapters) do
+    if chapter.read and (last_read_chapter_num == nil or chapter.chapter_num > last_read_chapter_num) then
+      last_read_chapter = chapter
+      last_read_chapter_num = chapter.chapter_num
+    end
+  end
+
+  -- If no chapters have been read, return the first chapter (lowest chapter number)
+  if last_read_chapter == nil then
+    local first_chapter = nil
+    local lowest_chapter_num = nil
+
+    for _, chapter in ipairs(self.chapters) do
+      if chapter.chapter_num and (lowest_chapter_num == nil or chapter.chapter_num < lowest_chapter_num) then
+        first_chapter = chapter
+        lowest_chapter_num = chapter.chapter_num
+      end
+    end
+
+    return first_chapter
+  end
+
+  -- Find the next unread chapter after the last read one
+  local next_chapter = nil
+  local next_chapter_num = nil
+
+  for _, chapter in ipairs(self.chapters) do
+    if not chapter.read and chapter.chapter_num and chapter.chapter_num > last_read_chapter_num then
+      if next_chapter_num == nil or chapter.chapter_num < next_chapter_num then
+        next_chapter = chapter
+        next_chapter_num = chapter.chapter_num
+      end
+    end
+  end
+
+  return next_chapter
+end
+
+--- @private
 --- @param chapter_num number
 function ChapterListing:getCurrentChapterIndexFromChapterNum(chapter_num)
   for i, chapter in ipairs(self.chapters) do
@@ -819,6 +872,36 @@ function ChapterListing:onDownloadAllChapters()
 end
 
 --- @private
+function ChapterListing:quickResume()
+  local nextChapter = self:getNextChapterToRead()
+
+  if nextChapter == nil then
+    UIManager:show(InfoMessage:new {
+      text = _("No more chapters to read!"),
+      timeout = 2,
+    })
+    return
+  end
+
+  -- Show info about which chapter will be opened
+  local chapterInfo = "Chapter "
+  if nextChapter.chapter_num then
+    chapterInfo = chapterInfo .. nextChapter.chapter_num
+  end
+  if nextChapter.title and nextChapter.title ~= "" then
+    chapterInfo = chapterInfo .. ": " .. nextChapter.title
+  end
+
+  UIManager:show(InfoMessage:new {
+    text = _("Resuming at ") .. chapterInfo,
+    timeout = 1.5,
+  })
+
+  -- Open the chapter
+  self:openChapterOnReader(nextChapter)
+end
+
+--- @private
 function ChapterListing:addToLibrary()
   Trapper:wrap(function()
     local response = LoadingDialog:showAndRun(
@@ -886,7 +969,7 @@ end
 --- @private
 function ChapterListing:deleteAllDownloadedChapters()
   local ConfirmBox = require("ui/widget/confirmbox")
-  
+
   UIManager:show(ConfirmBox:new {
     text = _("Delete all downloaded chapters for this manga?"),
     ok_text = _("Delete"),
@@ -913,7 +996,7 @@ function ChapterListing:performDeleteAllDownloads()
     end
 
     local result = response.body
-    
+
     if type(result) ~= "table" or type(result.success) ~= "boolean" then
       logger.err("Invalid response structure from deleteAllMangaDownloads")
       ErrorDialog:show(_("Invalid server response"))
@@ -934,17 +1017,17 @@ function ChapterListing:performDeleteAllDownloads()
   end)
 end
 
---- @private  
+--- @private
 function ChapterListing:onContextMenuChoice(entry, pos)
   local chapter = entry.chapter
-  
+
   if not chapter then
     return
   end
 
   local ButtonDialog = require("ui/widget/buttondialog")
   local buttons = {}
-  
+
   -- Only show delete option if chapter is downloaded
   if chapter.downloaded then
     table.insert(buttons, { {
@@ -955,7 +1038,7 @@ function ChapterListing:onContextMenuChoice(entry, pos)
       end,
     } })
   end
-  
+
   -- Always show mark as read option
   table.insert(buttons, { {
     text = chapter.read and (Icons.FA_EYE_SLASH .. _(" Mark as Unread")) or (Icons.FA_EYE .. _(" Mark as Read")),
@@ -977,9 +1060,9 @@ end
 --- @private
 function ChapterListing:deleteChapterDownload(chapter)
   local ConfirmBox = require("ui/widget/confirmbox")
-  
+
   local chapter_title = chapter.title or (_("Chapter ") .. tostring(chapter.chapter_num or chapter.id))
-  
+
   UIManager:show(ConfirmBox:new {
     text = _("Delete download for: ") .. chapter_title .. "?",
     ok_text = _("Delete"),
@@ -1006,7 +1089,7 @@ function ChapterListing:performDeleteChapterDownload(chapter)
     end
 
     local result = response.body
-    
+
     if type(result) ~= "table" or type(result.success) ~= "boolean" then
       logger.err("Invalid response structure from deleteChapterDownload")
       ErrorDialog:show(_("Invalid server response"))
@@ -1049,7 +1132,7 @@ function ChapterListing:toggleChapterReadStatus(chapter)
       text = _("Chapter marked as read!"),
       timeout = 2,
     })
-    
+
     -- Refresh to show updated state
     self:updateChapterList()
   end)

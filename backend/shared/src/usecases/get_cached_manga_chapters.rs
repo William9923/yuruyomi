@@ -33,16 +33,5 @@ pub async fn get_cached_manga_chapters(
         .collect::<Vec<_>>()
         .await;
 
-    // Log chapter information for debugging
-    for (index, chapter) in cached_chapters.iter().enumerate() {
-        log::info!(
-            "[{}] Chapter {:?} (Read: {:?}, Downloaded: {:?})",
-            index,
-            chapter.information.chapter_number,
-            chapter.state.read,
-            chapter.downloaded
-        );
-    }
-
     Ok(cached_chapters)
 }
