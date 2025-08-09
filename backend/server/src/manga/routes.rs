@@ -1,6 +1,6 @@
+use std::result::Result::Ok;
 use std::time::Duration;
 
-use anyhow::Ok;
 use axum::extract::{Path, Query, State as StateExtractor};
 use axum::routing::{delete, get, post};
 use axum::{Json, Router};
@@ -282,10 +282,10 @@ async fn clear_reading_history(
     let manga_id = MangaId::from(params);
 
     match usecases::clear_manga_reading_history(&database, manga_id).await {
-        Ok(_) => Ok(Json(OperationResult::success(
-            "Manga Reading histories succesfully cleared",
+        std::result::Result::Ok(_) => std::result::Result::Ok(Json(OperationResult::success(
+            "Manga Reading histories successfully cleared",
         ))),
-        Err(err) => Ok(Json(OperationResult::failure(err.to_string()))),
+        std::result::Result::Err(err) => std::result::Result::Ok(Json(OperationResult::failure(err.to_string()))),
     }
 }
 
@@ -295,7 +295,6 @@ async fn remove_downloaded_chapter(
     }): StateExtractor<State>,
     SourceExtractor(source): SourceExtractor,
     Path(params): Path<DownloadMangaChapterParams>,
-    Query(DownloadMangaChapterQuery { chapter_num }): Query<DownloadMangaChapterQuery>,
 ) -> Result<Json<()>, AppError> {
     let chapter_id = ChapterId::from(params);
     let chapter_storage = &*chapter_storage.lock().await;
