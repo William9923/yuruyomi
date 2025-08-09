@@ -22,10 +22,19 @@ jobs:
     - name: Install devenv.sh
       shell: bash
       run: nix profile install nixpkgs#devenv
+    - name: Verify cachix setup
+      shell: bash
+      run: |
+        echo "Checking cachix status..."
+        cachix use yuruyomi || echo "Failed to use cachix cache"
+        nix --version
+        devenv --version
     - name: Check format
       run: check-format
     - name: Check lint
       run: check-lint
+    - name: Run backend unit tests
+      run: cd backend && cargo test
     - name: Run frontend unittests
       run: test-frontend
     - name: Install needed packages for E2E tests

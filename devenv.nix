@@ -123,7 +123,7 @@ in {
       -o StrictHostKeyChecking=no \
       "root@$REMOTE_KOREADER_HOST" "$@"
     '';
-    test-frontend.exec = "cd $DEVENV_ROOT && busted -C frontend/yuruyomi.koplugin .";
+    test-frontend.exec = "cd $DEVENV_ROOT && busted -C plugins/yuruyomi.koplugin .";
     test-e2e.exec = ''
       cd $DEVENV_ROOT/e2e-tests && \
       poetry env use $(which python) && \
