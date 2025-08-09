@@ -46,7 +46,11 @@ pub fn routes() -> Router<State> {
         )
         .route(
             "/mangas/:source_id/:manga_id/chapters/:chapter_id/download",
-            delete(remove_downloaded_chapter),
+            delete(delete_chapter_download),
+        )
+        .route(
+            "/mangas/:source_id/:manga_id/downloads",
+            delete(delete_manga_downloads),
         )
         .route(
             "/mangas/:source_id/:manga_id/chapters/:chapter_id/mark-as-read",
@@ -289,20 +293,43 @@ async fn clear_reading_history(
     }
 }
 
-async fn remove_downloaded_chapter(
+async fn delete_chapter_download(
     StateExtractor(State {
         chapter_storage, ..
     }): StateExtractor<State>,
-    SourceExtractor(source): SourceExtractor,
     Path(params): Path<DownloadMangaChapterParams>,
-) -> Result<Json<()>, AppError> {
+) -> Result<Json<OperationResult>, AppError> {
     let chapter_id = ChapterId::from(params);
     let chapter_storage = &*chapter_storage.lock().await;
 
-    chapter_storage
-        .delete_chapter(&chapter_id)
-        .await
-        .map_err(AppError::from)?;
+    match usecases::delete_chapter_download(&chapter_storage, chapter_id).await {
+        std::result::Result::Ok(was_deleted) => {
+            if was_deleted {
+                std::result::Result::Ok(Json(OperationResult::success("Chapter download deleted successfully")))
+            } else {
+                std::result::Result::Ok(Json(OperationResult::success("Chapter was not downloaded")))
+            }
+        }
+        std::result::Result::Err(err) => std::result::Result::Ok(Json(OperationResult::failure(err.to_string()))),
+    }
+}
 
-    Ok(Json(()))
+async fn delete_manga_downloads(
+    StateExtractor(State {
+        database,
+        chapter_storage,
+        ..
+    }): StateExtractor<State>,
+    Path(params): Path<MangaChaptersPathParams>,
+) -> Result<Json<OperationResult>, AppError> {
+    let manga_id = MangaId::from(params);
+    let chapter_storage = &*chapter_storage.lock().await;
+
+    match usecases::delete_manga_downloads(&database, &chapter_storage, manga_id).await {
+        std::result::Result::Ok(deleted_count) => {
+            let message = format!("Successfully deleted {} chapter downloads", deleted_count);
+            std::result::Result::Ok(Json(OperationResult::success(&message)))
+        }
+        std::result::Result::Err(err) => std::result::Result::Ok(Json(OperationResult::failure(err.to_string()))),
+    }
 }
