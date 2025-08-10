@@ -636,9 +636,8 @@ end
 --- @private
 --- @param amount number|nil If specified, the amount of unread chapters to download.
 function ChapterListing:_initDownloadUnreadChaptersJob(amount)
-  if amount == nil then
-    amount = 0 -- 0 means all unread chapters
-  end
+  -- Don't set amount to 0 when nil - let backend handle nil vs 0 distinction
+  -- nil = all unread chapters, 0 = no chapters (which should never be used)
 
   local job = self:createDownloadJob(amount)
   if job then

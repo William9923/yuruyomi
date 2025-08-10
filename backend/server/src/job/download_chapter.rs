@@ -56,7 +56,11 @@ impl Job for DownloadChapterJob {
     type Error = ErrorResponse;
 
     async fn cancel(&self) -> Result<(), AppError> {
-        todo!()
+        // Simple job cancellation - mark as cancelled
+        *self.0.lock().await = Some(Err(ErrorResponse {
+            message: "Download was cancelled".to_string(),
+        }));
+        Ok(())
     }
 
     async fn poll(&self) -> JobState<Self::Progress, Self::Output, Self::Error> {

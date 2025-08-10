@@ -1,6 +1,7 @@
 use std::result::Result::Ok;
 use std::time::Duration;
 
+use anyhow::anyhow;
 use axum::extract::{Path, Query, State as StateExtractor};
 use axum::routing::{delete, get, post};
 use axum::{Json, Router};
@@ -173,7 +174,20 @@ async fn refresh_manga_chapters(
     Path(params): Path<MangaChaptersPathParams>,
 ) -> Result<Json<()>, AppError> {
     let manga_id = MangaId::from(params);
-    usecases::refresh_manga_chapters(&database, &source, manga_id).await?;
+
+    // Add timeout to prevent hanging refresh operations
+    let timeout_result = tokio::time::timeout(
+        Duration::from_secs(60),
+        usecases::refresh_manga_chapters(&database, &source, manga_id.clone())
+    ).await;
+
+    match timeout_result {
+        Ok(result) => result?,
+        Err(_) => {
+            warn!("Refresh chapters timed out after 60 seconds for manga: {:?}", manga_id);
+            return Err(AppError::Other(anyhow::anyhow!("Refresh chapters timed out after 60 seconds")));
+        }
+    }
 
     Ok(Json(()))
 }
@@ -206,10 +220,20 @@ async fn download_manga_chapter(
 ) -> Result<Json<String>, AppError> {
     let chapter_id = ChapterId::from(params);
     let chapter_storage = &*chapter_storage.lock().await;
-    let output_path =
+
+    // Add timeout to prevent hanging requests - 60 seconds should be enough
+    let timeout_result = tokio::time::timeout(
+        Duration::from_secs(60),
         usecases::fetch_manga_chapter(&source, chapter_storage, &chapter_id, chapter_num)
-            .await
-            .map_err(AppError::from_fetch_manga_chapters_error)?;
+    ).await;
+
+    let output_path = match timeout_result {
+        Ok(result) => result.map_err(AppError::from_fetch_manga_chapters_error)?,
+        Err(_) => {
+            warn!("Chapter download timed out after 60 seconds for chapter: {:?}", chapter_id);
+            return Err(AppError::Other(anyhow!("Chapter download timed out after 60 seconds")));
+        }
+    };
 
     Ok(Json(output_path.to_string_lossy().into()))
 }

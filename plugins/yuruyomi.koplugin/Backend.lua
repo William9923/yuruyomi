@@ -419,7 +419,7 @@ function Backend.createDownloadChapterJob(source_id, manga_id, chapter_id, chapt
   return Backend.requestJson({
     path = "/jobs/download-chapter",
     method = 'POST',
-    timeout = 30, -- add shorter timeout for job creation
+    timeout = 15, -- Reduced timeout for job creation
     body = {
       source_id = source_id,
       manga_id = manga_id,
@@ -435,6 +435,7 @@ function Backend.createDownloadUnreadChaptersJob(source_id, manga_id, amount)
   return Backend.requestJson({
     path = "/jobs/download-unread-chapters",
     method = 'POST',
+    timeout = 15, -- Reduced timeout for job creation
     body = {
       source_id = source_id,
       manga_id = manga_id,
@@ -456,6 +457,7 @@ function Backend.createDownloadScanlatorChaptersJob(source_id, manga_id, scanlat
   return Backend.requestJson({
     path = "/jobs/download-scanlator-chapters",
     method = 'POST',
+    timeout = 15, -- Added timeout for consistency
     body = body
   })
 end
@@ -472,7 +474,7 @@ function Backend.getJobDetails(id)
   return Backend.requestJson({
     path = "/jobs/" .. id,
     method = 'GET',
-    timeout = 15
+    timeout = 10 -- Reduced from 15 to 10 seconds
   })
 end
 
@@ -482,7 +484,7 @@ function Backend.requestJobCancellation(id)
   return Backend.requestJson({
     path = "/jobs/" .. id,
     method = 'DELETE',
-    timeout = 10,
+    timeout = 5,  -- Reduced from 10 to 5 seconds
   })
 end
 

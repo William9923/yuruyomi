@@ -1,7 +1,7 @@
 local _ = require("gettext")
 
 return {
-  name = "rakuyomi",
-  fullname = _("rakuyomi"),
+  name = "Yuruyomi",
+  fullname = _("Yuruyomi"),
   description = _("Download mangas on your e-book reader!")
 }

@@ -50,7 +50,7 @@ function UnixServer:request(request)
     method = request.method or "GET",
     headers = request.headers or {},
     body = request.body or "",
-    timeout_seconds = request.timeout_seconds or 60,
+    timeout_seconds = request.timeout_seconds or 30,
   }
 
   local requestJson = rapidjson.encode(requestWithDefaults)

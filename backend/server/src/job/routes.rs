@@ -215,7 +215,7 @@ async fn cancel_job(
     match job {
         RunningJob::UnreadChapters(job) => job.cancel().await?,
         RunningJob::ScanlatorChapters(job) => job.cancel().await?,
-        _ => Err(anyhow!("job is not cancellable"))?,
+        RunningJob::Chapter(job) => job.cancel().await?,
     };
 
     Ok(Json(()))

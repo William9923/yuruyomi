@@ -15,7 +15,7 @@ local MangaReader = {
 
 --- @class MangaReaderOptions
 --- @field path string Path to the file to be displayed.
---- @field on_return_callback fun(): nil Function to be called when the user selects "Go back to Rakuyomi".
+--- @field on_return_callback fun(): nil Function to be called when the user selects "Go back to Yuruyomi".
 --- @field on_end_of_book_callback fun(): nil Function to be called when the user reaches the end of the file.
 
 --- Displays the file located in `path` in the KOReader's reader.
@@ -77,7 +77,7 @@ end
 --- @private
 function MangaReader:addToMainMenu(menu_items)
   menu_items.go_back_to_rakuyomi = {
-    text = "Go back to Rakuyomi...",
+    text = "Go back to Yuruyomi...",
     sorting_hint = "main",
     callback = function()
       self:onReturn()

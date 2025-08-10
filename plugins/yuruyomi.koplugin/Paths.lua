@@ -1,13 +1,11 @@
 local DataStorage = require("datastorage")
 local ffiutil = require("ffi/util")
 
-local Testing = require("testing")
-
 local Paths = {}
 
 --- @return string -- The directory in which Rakuyomi's home folder is located.
 function Paths.getHomeDirectory()
-  return DataStorage:getDataDir() .. "/rakuyomi"
+  return DataStorage:getDataDir() .. "/yuruyomi"
 end
 
 --- @return string -- The directory in which the plugin is located.
