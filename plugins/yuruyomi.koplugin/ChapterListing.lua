@@ -424,30 +424,29 @@ function ChapterListing:openMenu()
   local dialog
 
   local buttons = {
-    -- Quick Resume
     {
       {
-        text = Icons.UNICODE_ARROW_RIGHT .. _(" Quick Resume"),
-        callback = function()
+        text = Icons.FA_BELL .. _(" Add to Library"),
+        callback = function(item)
           UIManager:close(dialog)
-          self:quickResume()
+          self:addToLibrary()
         end
       },
     },
     -- Library & Data Management
     {
       {
-        text = Icons.FA_BOOK .. _(" Add to Library"),
-        callback = function(item)
-          UIManager:close(dialog)
-          self:addToLibrary()
-        end
-      },
-      {
-        text = Icons.FA_CHECK .. " " .. _("Refresh Chapters"),
+        text = Icons.FA_CHECK .. " " .. _("Refresh"),
         callback = function()
           UIManager:close(dialog)
           self:refreshChapters()
+        end
+      },
+      {
+        text = Icons.UNICODE_ARROW_RIGHT .. _(" Resume"),
+        callback = function()
+          UIManager:close(dialog)
+          self:quickResume()
         end
       },
     },
@@ -455,21 +454,7 @@ function ChapterListing:openMenu()
     {}, -- spacer
     {
       {
-        text = Icons.FA_DOWNLOAD .. _(" Next 5 chapters"),
-        callback = function()
-          UIManager:close(dialog)
-
-          local lastDownloadedChapter = self:getLastDownloadedChapter()
-          if lastDownloadedChapter == nil then
-            self:_initDownloadUnreadChaptersJob(math.min(5, #self.chapters))
-          else
-            local chapterIdx = self:getCurrentChapterIndexFromChapterNum(lastDownloadedChapter.chapter_num)
-            self:_initDownloadUnreadChaptersJob(math.min((#self.chapters - chapterIdx) + 5, #self.chapters)) -- len(chapters) - current chapter index bcs the list is reversed
-          end
-        end
-      },
-      {
-        text = Icons.FA_DOWNLOAD .. _(" Next 10 chapters"),
+        text = Icons.FA_DOWNLOAD .. _(" Next 10"),
         callback = function()
           UIManager:close(dialog)
 
@@ -481,11 +466,25 @@ function ChapterListing:openMenu()
             self:_initDownloadUnreadChaptersJob(math.min((#self.chapters - chapterIdx) + 10, #self.chapters)) -- len(chapters) - current chapter index bcs the list is reversed
           end
         end
+      },
+      {
+        text = Icons.FA_DOWNLOAD .. _(" Next 25"),
+        callback = function()
+          UIManager:close(dialog)
+
+          local lastDownloadedChapter = self:getLastDownloadedChapter()
+          if lastDownloadedChapter == nil then
+            self:_initDownloadUnreadChaptersJob(math.min(25, #self.chapters))
+          else
+            local chapterIdx = self:getCurrentChapterIndexFromChapterNum(lastDownloadedChapter.chapter_num)
+            self:_initDownloadUnreadChaptersJob(math.min((#self.chapters - chapterIdx) + 25, #self.chapters)) -- len(chapters) - current chapter index bcs the list is reversed
+          end
+        end
       }
     },
     {
       {
-        text = Icons.FA_DOWNLOAD .. _(" Unread Chapters…"),
+        text = Icons.FA_DOWNLOAD .. _(" Custom"),
         callback = function()
           UIManager:close(dialog)
 
@@ -493,18 +492,25 @@ function ChapterListing:openMenu()
         end
       },
       {
-        text = Icons.FA_TRASH .. _(" Delete Chapters"),
+        text = Icons.FA_DOWNLOAD .. _(" Unread"),
+        callback = function()
+          UIManager:close(dialog)
+
+          self:_initDownloadUnreadChaptersJob(#self.chapters)
+        end
+      },
+    },
+    {}, -- spacer
+    {
+      {
+        text = Icons.FA_TRASH .. _(" Chapters"),
         callback = function()
           UIManager:close(dialog)
           self:deleteAllDownloadedChapters()
         end
       },
-    },
-    {}, -- spacer
-    -- Cleanup Options
-    {
       {
-        text = Icons.FA_ERASER .. _(" Remove Read Histories"),
+        text = Icons.FA_TRASH .. _(" Histories"),
         callback = function()
           UIManager:close(dialog)
           self:clearReadingHistory()
