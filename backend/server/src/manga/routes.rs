@@ -178,14 +178,20 @@ async fn refresh_manga_chapters(
     // Add timeout to prevent hanging refresh operations
     let timeout_result = tokio::time::timeout(
         Duration::from_secs(60),
-        usecases::refresh_manga_chapters(&database, &source, manga_id.clone())
-    ).await;
+        usecases::refresh_manga_chapters(&database, &source, manga_id.clone()),
+    )
+    .await;
 
     match timeout_result {
         Ok(result) => result?,
         Err(_) => {
-            warn!("Refresh chapters timed out after 60 seconds for manga: {:?}", manga_id);
-            return Err(AppError::Other(anyhow::anyhow!("Refresh chapters timed out after 60 seconds")));
+            warn!(
+                "Refresh chapters timed out after 60 seconds for manga: {:?}",
+                manga_id
+            );
+            return Err(AppError::Other(anyhow::anyhow!(
+                "Refresh chapters timed out after 60 seconds"
+            )));
         }
     }
 
@@ -224,14 +230,20 @@ async fn download_manga_chapter(
     // Add timeout to prevent hanging requests - 60 seconds should be enough
     let timeout_result = tokio::time::timeout(
         Duration::from_secs(60),
-        usecases::fetch_manga_chapter(&source, chapter_storage, &chapter_id, chapter_num)
-    ).await;
+        usecases::fetch_manga_chapter(&source, chapter_storage, &chapter_id, chapter_num),
+    )
+    .await;
 
     let output_path = match timeout_result {
         Ok(result) => result.map_err(AppError::from_fetch_manga_chapters_error)?,
         Err(_) => {
-            warn!("Chapter download timed out after 60 seconds for chapter: {:?}", chapter_id);
-            return Err(AppError::Other(anyhow!("Chapter download timed out after 60 seconds")));
+            warn!(
+                "Chapter download timed out after 60 seconds for chapter: {:?}",
+                chapter_id
+            );
+            return Err(AppError::Other(anyhow!(
+                "Chapter download timed out after 60 seconds"
+            )));
         }
     };
 
