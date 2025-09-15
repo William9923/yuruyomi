@@ -25,14 +25,23 @@ local Yuruyomi = InputContainer:extend({
 -- - when the `ReaderUI` is initialized, we're also called
 -- so we should register to the menu accordingly
 function Yuruyomi:init()
+  logger.info("Yuruyomi:init() called, UI name:", self.ui.name)
+  
   if self.ui.name == "ReaderUI" then
+    logger.info("Initializing MangaReader from ReaderUI")
     MangaReader:initializeFromReaderUI(self.ui)
+    logger.info("MangaReader initialization complete")
   else
+    logger.info("Registering to main menu")
     self.ui.menu:registerToMainMenu(self)
+    logger.info("Main menu registration complete")
   end
 
+  logger.info("Initializing Testing module")
   Testing:init()
+  logger.info("Emitting initialized event")
   Testing:emitEvent('initialized')
+  logger.info("Yuruyomi:init() complete")
 end
 
 function Yuruyomi:addToMainMenu(menu_items)

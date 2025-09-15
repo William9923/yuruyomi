@@ -160,10 +160,8 @@ in {
     '';
     
     # Development commands
-    dev.exec = "cd $DEVENV_ROOT && . tools/run-koreader-with-plugin.sh";
+    dev-frontend.exec = "cd $DEVENV_ROOT && . tools/run-koreader-with-plugin.sh";
     dev-backend.exec = "cd $DEVENV_ROOT && . tools/dev-backend.sh";
-    dev-frontend.exec = "cd $DEVENV_ROOT && . tools/dev-frontend.sh";
-    dev-both.exec = "cd $DEVENV_ROOT && . tools/dev-both.sh";
     debug.exec = "cd $DEVENV_ROOT && . tools/run-koreader-with-plugin.sh --debug";
     
     # Utility commands

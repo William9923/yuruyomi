@@ -21,12 +21,6 @@ dev-backend: ## Run only the backend server
 dev-frontend: ## Run only the frontend (requires backend running)
 	devenv shell dev-frontend
 
-dev-both: ## Run both frontend and backend
-	devenv shell dev-both
-
-debug: ## Run development environment with debug mode
-	devenv shell debug
-
 ## Code Quality Commands
 format: ## Format all code (Rust)
 	devenv shell format
