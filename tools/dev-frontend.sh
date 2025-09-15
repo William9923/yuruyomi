@@ -83,7 +83,17 @@ else
     echo "Using source files directly for faster development..."
 
     # Copy source plugin to KOReader's standard plugins directory
-    KOREADER_PLUGINS_DIR="$HOME/Library/Application Support/koreader/plugins"
+    # Detect the correct plugins directory based on OS
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        KOREADER_PLUGINS_DIR="$HOME/Library/Application Support/koreader/plugins"
+    else
+        # Linux and other Unix-like systems use XDG config directory
+        if [[ -n "$XDG_CONFIG_HOME" ]]; then
+            KOREADER_PLUGINS_DIR="$XDG_CONFIG_HOME/koreader/plugins"
+        else
+            KOREADER_PLUGINS_DIR="$HOME/.config/koreader/plugins"
+        fi
+    fi
     PLUGIN_NAME="yuruyomi.koplugin"
 
     echo "Creating KOReader plugins directory if it doesn't exist..."

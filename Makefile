@@ -73,6 +73,20 @@ docs: ## Start documentation server
 prepare-sql: ## Prepare SQL queries for compilation
 	devenv shell prepare-sql-queries
 
+sync-plugin: ## Sync plugin files to KOReader for development
+	@echo "Syncing plugin files..."
+	@./tools/dev-frontend.sh --no-server-check --sync-only 2>/dev/null || { \
+		if [[ "$$OSTYPE" == "darwin"* ]]; then \
+			PLUGINS_DIR="$$HOME/Library/Application Support/koreader/plugins"; \
+		else \
+			PLUGINS_DIR="$$HOME/.config/koreader/plugins"; \
+		fi; \
+		mkdir -p "$$PLUGINS_DIR"; \
+		rm -rf "$$PLUGINS_DIR/yuruyomi.koplugin"; \
+		cp -r plugins/yuruyomi.koplugin "$$PLUGINS_DIR/"; \
+		echo "✅ Plugin synced to: $$PLUGINS_DIR/yuruyomi.koplugin"; \
+	}
+
 ## Quick Development Workflow
 check: check-format check-lint test ## Quick local validation before commit
 
