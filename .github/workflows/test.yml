@@ -10,9 +10,10 @@ defaults:
 jobs:
   test:
     runs-on: ubuntu-latest
-    environment: Prod
+    # Only require Prod environment for pushes to main, not for PRs
+    environment: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'Prod' || '' }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: cachix/install-nix-action@v31
     - uses: cachix/cachix-action@v16
       with:
@@ -35,15 +36,29 @@ jobs:
       run: check-lint
     - name: Run backend unit tests
       run: cd backend && cargo test
-    - name: Run frontend unittests
+    - name: Run frontend unit tests
       run: test-frontend
-    - name: Install needed packages for E2E tests
+    - name: Install E2E test dependencies
       shell: bash
-      run: sudo apt-get update && sudo apt-get install -y fluxbox x11-xserver-utils gnome-screenshot ffmpeg
-    - name: Upload test artifacts
-      if: ${{ failure() }}
+      run: sudo apt-get update && sudo apt-get install -y fluxbox x11-xserver-utils gnome-screenshot ffmpeg xvfb
+    - name: Run E2E tests
+      shell: bash
+      run: |
+        # Run E2E tests in virtual display to avoid display issues
+        xvfb-run -a devenv shell test-e2e
+    - name: Upload test artifacts on failure
+      if: failure()
       uses: actions/upload-artifact@v4
       with:
         name: test-screenshots
         path: e2e-tests/screenshots/
+        if-no-files-found: ignore
+    - name: Upload test artifacts on failure (logs)
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-logs
+        path: |
+          e2e-tests/**/*.log
+          backend/target/debug/deps/*.log
         if-no-files-found: ignore

@@ -102,6 +102,7 @@ in {
   '';
 
   scripts = {
+    # Existing check commands
     check-format.exec = "cd $DEVENV_ROOT/backend && cargo fmt --check";
     check-lint.exec = ''
       cd $DEVENV_ROOT/backend && cargo clippy -- -D warnings
@@ -109,11 +110,63 @@ in {
     '';
     fix-rust-format.exec = "cd $DEVENV_ROOT/backend && cargo fmt --all";
     fix-rust-lint.exec = "cd $DEVENV_ROOT/backend && cargo clippy --fix --allow-dirty -- -D warnings";
+    
+    # Unified commands for better DX
+    format.exec = ''
+      echo "🔧 Formatting Rust code..."
+      cd $DEVENV_ROOT/backend && cargo fmt --all
+      echo "✅ Formatting complete"
+    '';
+    
+    lint.exec = ''
+      echo "🔍 Running Rust linter..."
+      cd $DEVENV_ROOT/backend && cargo clippy --fix --allow-dirty -- -D warnings
+      echo "🔍 Running Lua linter..."
+      cd $DEVENV_ROOT && python3 ci/lua-language-server-check.py plugins/
+      echo "✅ Linting complete"
+    '';
+    
+    test.exec = ''
+      echo "🧪 Running backend tests..."
+      cd $DEVENV_ROOT/backend && cargo test
+      echo "🧪 Running frontend tests..."
+      cd $DEVENV_ROOT && busted -C plugins/yuruyomi.koplugin .
+      echo "✅ Unit tests complete"
+    '';
+    
+    test-all.exec = ''
+      echo "🧪 Running all tests including E2E..."
+      echo "  → Backend tests..."
+      cd $DEVENV_ROOT/backend && cargo test
+      echo "  → Frontend tests..."
+      cd $DEVENV_ROOT && busted -C plugins/yuruyomi.koplugin .
+      echo "  → E2E tests..."
+      cd $DEVENV_ROOT/e2e-tests && \
+      poetry env use $(which python) && \
+      poetry install --no-root && \
+      poetry run pytest
+      echo "✅ All tests complete"
+    '';
+    
+    ci-check.exec = ''
+      echo "🔄 Running full CI checks..."
+      echo "  → Format check..."
+      check-format
+      echo "  → Lint check..."
+      check-lint
+      echo "  → Unit tests..."
+      test
+      echo "✅ CI checks passed"
+    '';
+    
+    # Development commands
     dev.exec = "cd $DEVENV_ROOT && . tools/run-koreader-with-plugin.sh";
     dev-backend.exec = "cd $DEVENV_ROOT && . tools/dev-backend.sh";
     dev-frontend.exec = "cd $DEVENV_ROOT && . tools/dev-frontend.sh";
     dev-both.exec = "cd $DEVENV_ROOT && . tools/dev-both.sh";
     debug.exec = "cd $DEVENV_ROOT && . tools/run-koreader-with-plugin.sh --debug";
+    
+    # Utility commands
     docs.exec = "cd $DEVENV_ROOT/docs && exec mdbook serve --open";
     prepare-sql-queries.exec = "cd $DEVENV_ROOT && . tools/prepare-sqlx-queries.sh";
     remote-install.exec = "cd $DEVENV_ROOT && python3 tools/install-into-remote-koreader.py";
@@ -123,6 +176,8 @@ in {
       -o StrictHostKeyChecking=no \
       "root@$REMOTE_KOREADER_HOST" "$@"
     '';
+    
+    # Individual test commands
     test-frontend.exec = "cd $DEVENV_ROOT && busted -C plugins/yuruyomi.koplugin .";
     test-e2e.exec = ''
       cd $DEVENV_ROOT/e2e-tests && \

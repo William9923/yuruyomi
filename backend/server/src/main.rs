@@ -147,23 +147,26 @@ impl BuildInfo {
 fn get_build_info() -> Option<BuildInfo> {
     // Try to read BUILD_INFO.json from the same directory as the executable
     let build_info_path = current_exe().ok()?.with_file_name("BUILD_INFO.json");
-    
+
     if let Ok(contents) = fs::read_to_string(&build_info_path) {
         if let Ok(build_info) = serde_json::from_str::<BuildInfo>(&contents) {
             return Some(build_info);
         }
     }
-    
+
     // Fallback for development builds - use a default build info
     #[cfg(debug_assertions)]
     {
-        log::warn!("BUILD_INFO.json not found at {:?}, using development fallback", build_info_path);
-        return Some(BuildInfo {
+        log::warn!(
+            "BUILD_INFO.json not found at {:?}, using development fallback",
+            build_info_path
+        );
+        Some(BuildInfo {
             version: "1.0.0-dev".to_string(),
             build: "development".to_string(),
-        });
+        })
     }
-    
+
     #[cfg(not(debug_assertions))]
     {
         log::error!("BUILD_INFO.json not found at {:?}", build_info_path);

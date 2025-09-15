@@ -17,3 +17,5 @@ devenv.local.nix
 # for development folders
 downloads/
 sources/
+
+database.db

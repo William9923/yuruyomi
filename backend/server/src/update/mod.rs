@@ -43,8 +43,11 @@ struct InstallUpdateRequest {
 async fn install_update_handler(
     Json(request): Json<InstallUpdateRequest>,
 ) -> Result<Json<()>, crate::AppError> {
-    let build_info = get_build_info()
-        .ok_or_else(|| AppError::Other(anyhow::anyhow!("Could not get build info. Updates are not supported in development builds.")))?;
+    let build_info = get_build_info().ok_or_else(|| {
+        AppError::Other(anyhow::anyhow!(
+            "Could not get build info. Updates are not supported in development builds."
+        ))
+    })?;
 
     // Prevent updates for development builds
     if build_info.version.contains("-dev") || build_info.build == "development" {
