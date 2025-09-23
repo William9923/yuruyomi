@@ -46,14 +46,11 @@ Development of yuruyomi has been discontinued as of version 1.1.0. The reasons f
    - Fixed download per chapter blocking UI interactions (now has proper cancellation)
    - Added easy download buttons for better user experience
    - Implemented chapter deletion capabilities
-3. **Time Constraints**: With my job commitments, I no longer have sufficient time to continue development which had done it's job for me.
+3. **Time Constraints**: With work commitments, I no longer have sufficient time to continue development.
 
-This project has achieved its goals and provides a stable, feature-complete manga reading solution. All core functionality is working as intended.
+This project has achieved its goals for my personal use case. While there are still many features I'd like to implement, the time investment wouldn't provide enough personal learning gain and incentive to continue. Hopefully this work can be used as reference if you drop by this repository :D
+
 
 ## Acknowledgments
 
 This project is based on [rakuyomi](https://github.com/hanatsumi/rakuyomi), an excellent manga reader plugin. Special thanks to the original developers for their foundational work.
-
-## License
-
-[Add license information if applicable]
