@@ -2,9 +2,13 @@
 
 **yuruyomi** is a manga reader plugin for [KOReader](https://github.com/koreader/koreader), forked from **rakuyomi**. This project was created as a learning and hobby project to enhance the manga reading experience on KOReader.
 
-## Screenshots
+## Demo 
 
-<!-- Screenshot placeholder - add demo images here -->
+
+
+https://github.com/user-attachments/assets/fe540a9d-dbf1-4a75-a438-47cb627c369a
+
+
 
 ## Features
 
