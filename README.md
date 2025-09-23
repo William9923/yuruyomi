@@ -1,76 +1,59 @@
 # yuruyomi
 
-**yuruyomi** is a fork based on **rakuyomi** , a manga reader plugin for [KOReader](https://github.com/koreader/koreader). Just for a learning & hobby projects on free time using **rakuyomi**, one of my favourite koreader plugins.
+**yuruyomi** is a manga reader plugin for [KOReader](https://github.com/koreader/koreader), forked from **rakuyomi**. This project was created as a learning and hobby project to enhance the manga reading experience on KOReader.
 
+## Screenshots
 
-## Reference
-- [rakuyomi](https://github.com/hanatsumi/rakuyomi)
+<!-- Screenshot placeholder - add demo images here -->
 
+## Features
 
-## Plan
+This plugin enhances the manga reading experience with the following features:
 
-How does the UI experience I would like ?
+### Download Management
+- **Flexible Download Options**: Download next 5, 10, or 20 unread chapters
+- **Custom Download Amounts**: Specify exactly how many chapters to download
+- **Download Control**: Delete downloads when no longer needed
 
-1. Download experience
-- current:
-  1. Only allow download unread
-- proposed: -> DONE
-  1. Allow download: -> DONE
-     - Next 5 unread
-     - Next 10 unread
-     - Next 20 unread
-     - Custom (use the same approach)
+### Library Management
+- **Refresh Chapters**: Update chapter listings from sources
+- **Reading History**: Clear reading history when needed
+- **Quick Resume**: Easily continue reading from where you left off
+- **Dismissable Read Prompt**: Skip immediate reading after adding manga
 
-  2. Refresh chapters list -> DONE
-  3. Delete reading history -> DONE
-  6. Dismissable immediate read -> DONE
-  4. Delete download -> DONE
-  5. Quick Resume (for reading) -> DONE
+## Installation
 
+1. Download the plugin from the releases page
+2. Extract the `yuruyomi.koplugin` folder to your KOReader plugins directory
+3. Restart KOReader
+4. Enable the plugin in KOReader's plugin manager
 
-  --- next release -> 1.1.0
+## Usage
 
-  6. Custom Download location per source/manga/<chapter-num> folder
-  7. Action Button per item in chapter listing
-    Action Button: Download button (for now)
+1. Open the plugin from KOReader's tools menu
+2. Search for manga using available sources
+3. Add manga to your library
+4. Use the enhanced download options to manage your offline reading collection
 
-  --- next release -> 1.2.0
+## Project Status
 
-  8. Proper progress bar dialog + download manager -> download single & download many
-  9. Show Download Queue Manager per chapter, max showing 5 (or via settings) (linear 1 at a time on background), dialog
+**⚠️ Important Notice: Development Discontinued**
 
-  --- next release -> 1.3.0
+Development of yuruyomi has been discontinued as of version 1.1.0. The reasons for this decision:
 
-2. List of manga in libraries + manga finder:
-- current: ListView
-- proposed:
-  Mosaic list view (might be the best tho...):
-  - Manga cover:
-  - with metadata details:
-    - Manga Name (in bold)
-    - Source
-    - Total chapter
-  (Plugin reference: coverbrowser)
+1. **Mission Accomplished**: The plugin now provides everything I wanted for a plug-and-play manga reader experience in KOReader
+2. **Key Issues Resolved**: All the difficulties I encountered with the original rakuyomi have been addressed:
+   - Fixed download per chapter blocking UI interactions (now has proper cancellation)
+   - Added easy download buttons for better user experience
+   - Implemented chapter deletion capabilities
+3. **Time Constraints**: With my job commitments, I no longer have sufficient time to continue development which had done it's job for me.
 
-  --- next release -> 1.4.0
+This project has achieved its goals and provides a stable, feature-complete manga reading solution. All core functionality is working as intended.
 
+## Acknowledgments
 
-3. Detailed view of a manga -> after search result
-- current: Immediate Chapter Listing
-- proposed:
- - mihon showcase, where we show:
- 1. cover
- 2. title
- 3. description
- 4. manga tag (if there any)
- 5. writer
- 6. Show chapter list
+This project is based on [rakuyomi](https://github.com/hanatsumi/rakuyomi), an excellent manga reader plugin. Special thanks to the original developers for their foundational work.
 
-  --- next release -> 1.5.0
+## License
 
-4. Search & Manga Discovery: => how does mihon had different search??
-- current: search only by text
-- proposed:
-  - sort by popularity or any other kind of  (dropdown options)
-
-  --- next release -> 1.6.0
+[Add license information if applicable]
